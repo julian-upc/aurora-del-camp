@@ -10,6 +10,9 @@
 
 \begin{document}
 
+\renewcommand*\descriptionlabel[1]{%
+\hspace\labelsep\normalfont\itshape #1:}.
+
 \title{Aurora del Camp -- specification}
 \author{Julian Pfeifle}
 \date{Version of \today}
@@ -44,25 +47,51 @@ simultaneously, while only one thing at a time may be done in all
 acres $A\smallsetminus a_0$. 
 
 We will have several different families of variables, one family for
-each specific task: $ti$~for tilling, $rv$~for rotovating, $gm$~for
-green manure planting, $ft$~for fertilizing, $bb$~for bed building,
-$si$~for setting up irrigation, $sr$ for setting rows, $ss$ for
-soaking seeds, $cs$ for cutting or separating cloned seeds, $gc$~for
-false germination and cleaning, $pl$~for planting, $ha$~for
-harvesting.\footnote{\ojo{I left out buying seeds, because that seems
-    easy enough to do. Is that all right?}}
+each specific task. These are further subdivided into families that
+only affect the field, and are thus common to all crops, and those
+that aer specific to each crop.
 
-Each of these families contains variables indexed by the type of crop
-$c\in C$, the week $w\in W$ of the year, and the piece of land $a\in
-A$. Each of the variables can take on the value~$0$ or~$1$, depending
-on whether or not the task at hand is undertaken for crop~$c$ in the
-unit acre~$a$ during week~$w$.  For instance, the set of seed-soaking
-variables is $ss=\{ss_{c,w,a} : c\in C, w\in W, a\in A\}$. Some
-families have less variables: for instance, the tilling variables are
-just $ti=\{ti_{w,a}:w\in W, a\in A\}$. 
+\begin{description}
+\item[Tasks common to all crops]  $ti$~for tilling, $rv$~for
+  rotovating, $gm$~for green manure planting, $ft$~for fertilizing,
+  $bb$~for bed building, $si$~for setting up irrigation, $sr$ for
+  setting rows. 
 
-\ojo{Now finish enumerating the variables, and count how many there
-  are. }
+\noindent
+  Each of these families contains variables indexed by the week~$w\in
+  W$ of the year, and the piece of land~$a\in A$.
+
+\item[Tasks specific to a crop] $ss$ for soaking seeds, $cs$ for
+  cutting or separating cloned seeds, $gc$~for false germination and
+  cleaning, $pl$~for planting\footnote{\ojo{Is transplanting and planting
+    the same process?}}, $we$ for weeding, $fu$ for fumigating, $th$
+for thinning, $tr$ for trimming, $co$ for covering, $ha$~for harvesting.\footnote{\ojo{I
+      left out buying seeds, because that seems easy enough to do. Is
+      that all right?}}
+
+\noindent
+  Each of these families contains variables indexed by the type of
+  crop $c\in C$, the week $w\in W$ of the year, and the piece of land
+  $a\in A$.
+\end{description}
+
+Each variable can take on the value~$0$ or~$1$, depending on whether
+or not the task at hand is undertaken for crop~$c$ in the unit
+acre~$a$ during week~$w$.  For instance, the set of seed-soaking
+variables is $ss=\{ss_{c,w,a} : c\in C, w\in W, a\in A\}$. The
+families common to all crops have less variables: for instance, the
+tilling variables are just $ti=\{ti_{w,a}:w\in W, a\in A\}$.
+
+With an estimated $40$ types of crops and $40$ unit acres, we get
+\[
+   7\times 40\times 52 \text{ (common) }
+   \ + \ 
+   10\times40\times 40\times 52 \text{ (specific)}
+   \ = \ 
+   846\,560 \text{ variables.}
+\]
+This is well within the reach of commercial solvers such as
+Gurobi; we'll have to see how cbc performs.
 
 \subsection{Constraints}
 

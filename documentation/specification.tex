@@ -1,6 +1,7 @@
 \documentclass[11pt]{amsart}
 
 \usepackage{times}
+\usepackage{microtype}
 \usepackage{amssymb}
 \usepackage{paralist}
 \usepackage{url}
@@ -34,91 +35,98 @@ without paying any license fees.
 
 \section{Problem formulation}
 
-We start by translating Gilad's document into this language.
-
+We start by translating Gilad's document into the language of integer
+programs. % Briefly, we want a formulation of the form
+% \begin{eqnarray*}
+%     \text{minimize} && c\cdot x \\
+%     \text{such that} && Ax  \le  b\\
+%     && x\in\{0,1\}^n
+% \end{eqnarray*}
+  
 \subsection{Variables}
 
 We work with a set $C$ of crops, the set $W=\{1,\dots,52\}$ of weeks
-in the year, and a set $A$ of ``unit acres'', i.e., indivisible units
+in the year, and a set $A$ of ``unit lots'', i.e., indivisible units
 of farmland dedicated to a single crop or task. The set $A$ has a
 distinguished member $a_0\in A$ that stands for off-field work. In
-this fictitious area of acre, any number of tasks may be performed
+this fictitious area of lot, any number of tasks may be performed
 simultaneously, while only one thing at a time may be done in all
-acres $A\smallsetminus a_0$. 
+lots $A\smallsetminus a_0$. 
 
 We will have several different families of variables, one family for
 each specific task. These are further subdivided into families that
 only affect the field, and are thus common to all crops, and those
-that aer specific to each crop.
+that are specific to each crop.
 
 \begin{description}
 \item[Tasks common to all crops]  $ti$~for tilling, $rv$~for
   rotovating, $gm$~for green manure planting, $ft$~for fertilizing,
   $bb$~for bed building, $si$~for setting up irrigation, $sr$ for
-  setting rows. 
+  setting rows, $we$ for weeding.
 
-\noindent
-  Each of these families contains variables indexed by the week~$w\in
-  W$ of the year, and the piece of land~$a\in A$.
-
-\item[Tasks specific to a crop] $ss$ for soaking seeds, $cs$ for
-  cutting or separating cloned seeds, $gc$~for false germination and
-  cleaning, $pl$~for planting\footnote{\ojo{Is transplanting and planting
-    the same process?}}, $we$ for weeding, $fu$ for fumigating, $th$
-for thinning, $tr$ for trimming, $co$ for covering, $ha$~for harvesting.\footnote{\ojo{I
-      left out buying seeds, because that seems easy enough to do. Is
-      that all right?}}
-
-\noindent
-  Each of these families contains variables indexed by the type of
-  crop $c\in C$, the week $w\in W$ of the year, and the piece of land
-  $a\in A$.
+\smallskip
+\item[Tasks specific to a crop] $by$ for buying seeds, $ss$ for
+  soaking seeds, $cs$ for cutting or separating cloned seeds, $gc$~for
+  false germination and cleaning, $pl$~for planting\footnote{We
+    consider transplanting and planting to be the same process.},
+  $f\!u$ for fumigating, $th$ for thinning, $tr$ for trimming, $co$
+  for covering, $ha$~for harvesting.
 \end{description}
 
-Each variable can take on the value~$0$ or~$1$, depending on whether
-or not the task at hand is undertaken for crop~$c$ in the unit
-acre~$a$ during week~$w$.  For instance, the set of seed-soaking
-variables is $ss=\{ss_{c,w,a} : c\in C, w\in W, a\in A\}$. The
-families common to all crops have less variables: for instance, the
-tilling variables are just $ti=\{ti_{w,a}:w\in W, a\in A\}$.
+Each of the ``common'' families contains variables indexed by the
+week~$w\in W$ of the year, and the piece of land~$a\in A$. For
+instance, the tilling variables are $ti=\{ti_{w,a}:w\in W, a\in
+A\}$. The ``crop-specific'' families, on the other hand, contain more
+variables, because they also depend on the type of crop $c\in C$. For
+example, the set of seed-soaking variables is $ss=\{ss_{c,w,a} : c\in
+C, w\in W, a\in A\}$. Each individual variable in each of these
+families can take on the value~$0$ or~$1$, depending on whether or not
+the task at hand is undertaken for crop~$c$ in the unit lot~$a$
+during week~$w$.
 
-With an estimated $40$ types of crops and $40$ unit acres, we get
+With an estimated $40$ types of crops and $40$ unit lots, we get an
+upper bound of
 \[
-   7\times 40\times 52 \text{ (common) }
+   8\times 40\times 52 \text{ (common) }
    \ + \ 
-   10\times40\times 40\times 52 \text{ (specific)}
+   10\times 40\times 40\times 52 \text{ (specific)}
    \ = \ 
-   846\,560 \text{ variables.}
+   848\,640 \text{ variables.}
 \]
-This is well within the reach of commercial solvers such as
-Gurobi; we'll have to see how cbc performs.
+One the one hand, this is well within the reach of commercial solvers
+such as Gurobi (we'll have to see how cbc performs, though); on the
+other, there will actually be substantially less variables than this
+because not all crops need all variables. For example, a crop that is
+bought as a seedling from a nursery does not need variables from the
+families $by, ss, cs, gc$.
 
 \subsection{Constraints}
 
 Some of the more obvious constraints are the following:
 
 \begin{description}
-\item[In each week, there is only one crop at each unit acre] 
+\item[In each week, there is only one crop planted at each unit lot] 
 \[
    \sum_{c\in C} x_{c,w,a} \ = \ 1
    \qquad\text{for all } w\in W \text{ and } a\in A
 \]
 
-\ojo{Finish the constraints, starting with the precedence constraints}
+\item[Calculate the yield] The yield of crop $c$ in week $w$ is
+\[
+   \sum_{a\in A} pl_{c,w,a}
+\]
 \end{description}
 
 
 \subsection{Objective function}
 
 Each crop $c\in C$ has a yield of  $y_{c,w}$, depending on the week
-$w\in W$ it is planted. Since the default direction in optimization
-appears to be minimization, we make the yields negative.
-
-The objective function is thus
+$w\in W$ it is planted. 
+The objective function we want to  maximize is thus
 \[
    f 
    \ = \
-   -\sum_{c\in C, y\in Y} y_{c,w} \sum_{a\in A} x_{c,w,a}
+   \sum_{c\in C, y\in Y} y_{c,w} \sum_{a\in A} x_{c,w,a}
 \]
 
 \section{Server-side technology}

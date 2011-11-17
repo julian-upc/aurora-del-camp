@@ -7,6 +7,7 @@
 \usepackage{url}
 \usepackage{a4wide}
 
+\numberwithin{equation}{section}
 \newcommand{\ojo}[1]{\textsf{\bfseries\boldmath{#1}}}
 
 \begin{document}
@@ -45,7 +46,7 @@ programs. % Briefly, we want a formulation of the form
   
 \subsection{Variables}
 
-We work with a set $C$ of crops, the set $W=\{1,\dots,52\}$ of weeks
+We work with a set $C$ of crops, the set $W=\{0,\dots,51\}$ of weeks
 in the year, and a set $A$ of ``unit lots'', i.e., indivisible units
 of farmland dedicated to a single crop or task. The set $A$ has a
 distinguished member $a_0\in A$ that stands for off-field work. In
@@ -102,20 +103,73 @@ families $by, ss, cs, gc$.
 
 \subsection{Constraints}
 
-Some of the more obvious constraints are the following:
-
+To formulate our constraints, we need some additional data on our
+crops:
 \begin{description}
-\item[In each week, there is only one crop planted at each unit lot] 
+\item[Plantation interval $pi_{c}$] How many weeks must pass, at
+  least, from one planting of crop~$c$ to the next
+
+\item[Yield $y_{c,i}$] The amount of fruit that crop $c$ yields
+  $i$~weeks after planting, for $0\le i\le pi_c$.
+\end{description}
+
+Now  we can formulate the constraints:
+
+\begin{enumerate}
+\item \emph{In each week, there is at most one crop planted at each unit lot:}
 \[
-   \sum_{c\in C} x_{c,w,a} \ = \ 1
+   \sum_{c\in C} pl_{c,w,a} \ \le \ 1
    \qquad\text{for all } w\in W \text{ and } a\in A
 \]
 
-\item[Calculate the yield] The yield of crop $c$ in week $w$ is
+\item\emph{Respect plantation intervals:}
+\begin{equation}\label{eq:pi}
+   \sum_{i=w}^{w+pi_c} pl_{c,i,a} \ \le \ 1
+   \qquad\text{for all } w\in W, c\in C, a\in A,
+\end{equation}
+because during any interval of $pi_c$ consecutive weeks, there may
+occur at most one planting.  Here and throughout, index additions such
+as $i+pi_c$ are understood to be taken modulo 52.
+
+\smallskip
+\item\emph{Prescribe the yield:} If we want the total yield of crop~$c$ in
+  a given week~$w\in W$ to be $Y_{c,w}$, we must impose
 \[
-   \sum_{a\in A} pl_{c,w,a}
+    \sum_{a\in A} \sum_{i=0}^{pi_c} y_{c,i}\; pl_{c,w-i,a}
+    \ = \
+    Y_{c,w},
 \]
-\end{description}
+because a crop planted $i$ weeks before week $w$ has a yield of
+$y_{c,i}$ in week~$w$.  This works because by the foregoing
+constraint~\eqref{eq:pi}, at most one of the variables
+$\{pl_{c,w-i,a}:0\le i\le pi_c\}$ can have the value~$1$, while the rest must
+be~$0$.
+
+\smallskip
+\item\emph{Precedence constraints:} Here we must deal with the fact
+  that we model our year to be cyclic, i.e., the same 52~weeks repeat
+  again and again, as witnessed by our index addition modulo~52 in
+  condition~\eqref{eq:pi}. Nevertheless, some tasks must be completed
+  before others can start, which implies a linear and not circular
+  ordering of time. We model this by interpreting precedence
+  constraints to be valid only within a half-year horizon, so
+  that \emph{``$x$ must happen before $y$''} is interpreted as meaning
+  \emph{``$x$ may not happen until half a year after $y$''}.
+
+  For example, the constraint that ``tilling'' must happen before ``weeding''
+  is modeled as
+  \[
+     ti_{w+i,c} \ \le \ we_{w,c}
+     \qquad\text{for all } w\in W, c\in C, \text{ and }
+     i\in\{0,\dots,26\}.
+  \]
+\ojo{this is still incorrect}
+  To check this, note that the inequality is not satisfied, for
+  example, if $ti_{4,c}=1$ and $we_{0,c}=1$ (because these variables
+  say we till in week~4, after having weeded in week~0), but is
+  satisfied if $ti_{0,c}=1$ and $we_{4,c}=1$.
+
+\end{enumerate}
 
 
 \subsection{Objective function}

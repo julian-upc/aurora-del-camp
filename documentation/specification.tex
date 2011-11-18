@@ -34,7 +34,12 @@ solvers that have an open source license (in the case of CBC, the
 ``Eclipse Public License'') that permits Gilad to use it commercially
 without paying any license fees.
 
-\section{Problem formulation}
+\section{Problem formulation using events}
+
+Here we follow \cite{artigues-etal11}. The resources consumed are time
+and money, and money is produced again by selling the crops.
+
+\section{Problem formulation using discrete time}
 
 We start by translating Gilad's document into the language of integer
 programs. % Briefly, we want a formulation of the form
@@ -156,18 +161,18 @@ be~$0$.
   that \emph{``$x$ must happen before $y$''} is interpreted as meaning
   \emph{``$x$ may not happen until half a year after $y$''}.
 
-  For example, the constraint that ``tilling'' must happen before ``weeding''
-  is modeled as
-  \[
-     ti_{w+i,c} \ \le \ we_{w,c}
-     \qquad\text{for all } w\in W, c\in C, \text{ and }
-     i\in\{0,\dots,26\}.
-  \]
-\ojo{this is still incorrect}
-  To check this, note that the inequality is not satisfied, for
-  example, if $ti_{4,c}=1$ and $we_{0,c}=1$ (because these variables
-  say we till in week~4, after having weeded in week~0), but is
-  satisfied if $ti_{0,c}=1$ and $we_{4,c}=1$.
+%   For example, the constraint that ``tilling'' must happen before ``weeding''
+%   is modeled as
+%   \[
+%      \sum_{i=1}^26 i\cdot ti_{i,c} \ \le \ we_{w,c}
+%      \qquad\text{for all } w\in W, c\in C, \text{ and }
+%      i\in\{1,\dots,26\}.
+%   \]
+% \ojo{this is still incorrect}
+%   To check this, note that the inequality is not satisfied, for
+%   example, if $ti_{4,c}=1$ and $we_{0,c}=1$ (because these variables
+%   say we till in week~4, after having weeded in week~0), but is
+%   satisfied if $ti_{0,c}=1$ and $we_{4,c}=1$.
 
 \end{enumerate}
 

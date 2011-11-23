@@ -34,10 +34,9 @@ solvers that have an open source license (in the case of CBC, the
 ``Eclipse Public License'') that permits Gilad to use it commercially
 without paying any license fees.
 
-\section{Approaches to modeling}
+\section{Event-based modeling}
 
-Before summarizing some  approaches to modeling the problem,
-we briefly list the activities involved.
+We first list the activities involved.
 
 \subsection{Tasks to be considered}
 
@@ -65,42 +64,19 @@ acyclic graph~$E$. Thus, $t_1\longrightarrow t_2$ (also written
 $t_1<t_2$) is a directed edge in~$E$ if $t_1$~must be completed
 before $t_2$~can start.
 
-\subsection{Approaches}
+\subsection{Events}
 
-We consider two types of models:
 
-\begin{description}
-\item[Discrete time, all-in-one] The first model discretizes time into
-  52~weeks, and reserves a 0/1~variable for each triple in $T_c\times
-  W\times A$, respectively quadruple in $T_s\times C\times W\times
-  A$. Here $T=T_c\cup T_s$ denotes the set of common and specific
-  tasks, $C$~the set of crops, $W$~the set of weeks in the planning
-  horizon of the model (so, for example, $W=\{0,1,\dots,51\}$
-  corresponds to modelling one year), and $A$~the set of \emph{unit
-    lots} that the available farmland is divided into.  Each variable,
-  say $v_{t,w,a}$, takes the value~$1$ (respectively,~$0$), if the
-  task~$t$ is (respectively, is~not) executed in week~$w$ in the unit
-  lot~$a$. Thus, this model simultaneously solves the
-  \emph{scheduling} part of the problem, in which the appropriate
-  sequencing of events is determined, and the \emph{allocation} part,
-  in which tasks and crops are assigned their proper place in the
-  field.
+We separate the \emph{scheduling} part of the problem, in which the
+appropriate sequencing of events is determined, from the
+\emph{allocation} part, in which tasks and crops are assigned their
+proper place in the field. First, the optimal sequencing of events is
+determined in a way that respects the available field space and work
+force using an \emph{event-based} formulation (see below); in a second
+step, each task is allocated its proper space in the field. Separating
+the two phases makes it easier to formulate each one, and presumably
+makes them (and thus, the whole problem) easier to solve.
 
-\item[Event-based, separate] The second model separates these two
-  parts of the problem. First, the optimal sequencing of events is
-  determined in a way that respects the available field space and work
-  force using an \emph{event-based} formulation (see below); in a
-  second step, each task is allocated its proper space in the
-  field. Separating the two phases makes it easier to formulate each
-  one, and presumably makes them (and thus, the whole problem) easier
-  to solve.
-\end{description}
-
-Since the event-based strategy appears to be more powerful, we
-describe it first; the discrete-time formulation might eventually
-disappear completely from this document.
-
-\section{Problem formulation using events}
 
 Here we follow \cite{artigues-etal11}. Put briefly, the resources
 consumed are time, money and space in the fields, and money is
@@ -115,122 +91,6 @@ is to have ``planting a batch of tomatoes in summmer 2011'',
 a third batch of tomatoes, but in the summer of 2012'' to be different
 tasks. This allows Gilad to 
 
-\section{Problem formulation using discrete time}
-
-This kind of formulation needs significantly more variables, but has a
-better LP-relaxation. Only by testing both will we be able to
-determine which is the superior method for our problem. To keep the
-number of variables somewhat managable, we work with \emph{circular time} by
-discretizing one year into 52 weeks, and identifying the start and end
-of that year.
-  
-\subsection{Variables}
-
-We work with a set $C$ of crops, the set $W=\{0,\dots,51\}$ of weeks
-in the year, and a set $A$ of ``unit lots'', i.e., indivisible units
-of farmland dedicated to a single crop or task. The set $A$ has a
-distinguished member $a_0\in A$ that stands for off-field work. In
-this fictitious lot, any number of tasks may be performed
-simultaneously, while only one thing at a time may be done in all lots
-$A\smallsetminus a_0$.
-
-In the discrete time formulation, each of the ``common'' families
-contains variables indexed by the week~$w\in W$ of the year, and the
-piece of land~$a\in A$. For instance, the tilling variables are
-$ti=\{ti_{w,a}:w\in W, a\in A\}$. The ``crop-specific'' families, on
-the other hand, contain more variables, because they also depend on
-the type of crop $c\in C$. For example, the set of seed-soaking
-variables is $ss=\{ss_{c,w,a} : c\in C, w\in W, a\in A\}$. Each
-individual variable in each of these families can take on the
-value~$0$ or~$1$, depending on whether or not the task at hand is
-undertaken for crop~$c$ in the unit lot~$a$ during week~$w$.
-
-With an estimated $40$ types of crops and $40$ unit lots, we get an
-upper bound of
-\[
-   8\times 40\times 52 \text{ (common) }
-   \ + \ 
-   10\times 40\times 40\times 52 \text{ (specific)}
-   \ = \ 
-   848\,640 \text{ variables.}
-\]
-One the one hand, this is well within the reach of commercial solvers
-such as Gurobi (we'll have to see how cbc performs, though); on the
-other, there will actually be substantially less variables than this
-because not all crops need all variables. For example, a crop that is
-bought as a seedling from a nursery does not need variables from the
-families $by, ss, cs, gc$.
-
-\subsection{Constraints}
-
-To formulate our constraints, we need some additional data on our
-crops:
-\begin{description}
-\item[Plantation interval $pi_{c}$] How many weeks must pass, at
-  least, between plantings of crop~$c$ 
-
-\item[Yield $y_{c,i}$] The amount of fruit that crop $c$ yields
-  $i$~weeks after planting, for $0\le i\le pi_c$.
-\end{description}
-
-Now  we can formulate the constraints:
-
-\begin{enumerate}
-\item \emph{In each week, there is at most one crop planted at each unit lot:}
-\[
-   \sum_{c\in C} pl_{c,w,a} \ \le \ 1
-   \qquad\text{for all } w\in W \text{ and } a\in A
-\]
-
-\item\emph{Respect plantation intervals:}
-\begin{equation}\label{eq:pi}
-   \sum_{i=w}^{w+pi_c} pl_{c,i,a} \ \le \ 1
-   \qquad\text{for all } w\in W, c\in C, a\in A,
-\end{equation}
-because during any interval of $pi_c$ consecutive weeks, there may
-occur at most one planting.  Here and throughout, index additions such
-as $i+pi_c$ are understood to be taken modulo 52.
-
-\smallskip
-\item\emph{Prescribe the yield:} If we want the total yield of crop~$c$ in
-  a given week~$w\in W$ to be $Y_{c,w}$, we must impose
-\[
-    \sum_{a\in A} \sum_{i=0}^{pi_c} y_{c,i}\; pl_{c,w-i,a}
-    \ = \
-    Y_{c,w},
-\]
-because a crop planted $i$ weeks before week $w$ has a yield of
-$y_{c,i}$ in week~$w$.  This works because by the foregoing
-constraint~\eqref{eq:pi}, at most one of the variables
-$\{pl_{c,w-i,a}:0\le i\le pi_c\}$ can have the value~$1$, while the rest must
-be~$0$.
-
-\smallskip
-\item\emph{Precedence constraints:} Here we must deal with the fact
-  that we model our year to be cyclic, i.e., the same 52~weeks repeat
-  again and again, as witnessed by our index addition modulo~52 in
-  condition~\eqref{eq:pi}. Nevertheless, some tasks must be completed
-  before others can start, which implies a linear and not circular
-  ordering of time. We model this by interpreting precedence
-  constraints to be valid only within a half-year horizon, so
-  that \emph{``$x$ must happen before $y$''} is interpreted as meaning
-  \emph{``$x$ may not happen until half a year after $y$''}.
-  For example, the constraint that ``tilling'' must happen before ``weeding''
-  for each crop is modeled as
-  \begin{align*}
-     \textstyle ti_{w+i,a} & \ \le \  we_{w,a} &
-     \text{for all } w\in W,\ a\in A, \text{ and }
-     i\in\{0,\dots,26\},\\
-     \textstyle ti_{w+i,a} + we_{w,a} & \ \le\   1 &
-     \text{for all } w\in W,\ a\in A, \text{ and }
-     i\in\{0,\dots,26\}.
-  \end{align*}
-  To check this, note that these inequalities are not satisfied, for
-  example, if $ti_{4,c}=1$ and $we_{0,c}=1$ (which is as it should be,
-  because these variables say we till in week~4, after having weeded
-  in week~0), but they are satisfied if $ti_{0,c}=1$ and $we_{4,c}=1$.
-
-\end{enumerate}
 
 
 \subsection{Objective function}

@@ -6,8 +6,10 @@
 \usepackage{paralist}
 \usepackage{url}
 \usepackage{a4wide}
+\usepackage{bbm}
 
-\newcommand{\cT}{\mathcal{T}}
+\newcommand{\NN}{\mathbbm{N}}
+\newcommand{\ZZ}{\mathbbm{Z}}
 
 \numberwithin{equation}{section}
 \newcommand{\ojo}[1]{\textsf{\bfseries\boldmath{#1}}}
@@ -39,37 +41,67 @@ without paying any license fees.
 \section{Event-based modeling}
 
 
-\subsection{Tasks to be considered}
+\subsection{Activities to be considered}
 
-These come in two types: $T=T_c\cup T_s$, where the tasks in $T_c$
-only affect the field, and are thus common to all crops, and the
-tasks~$T_s$ are specific to each crop. They are:
+In the parlance of \cite{artigues-etal11}, we want to schedule a set
+of \emph{activities} subject to certain constraints. In our setup,
+each activity is associated to a certain specific part of the
+available fields. We refer to these parts or areas as \emph{lots}, and
+collect them into a set~$L$. We allow them to have different
+sizes.
+
+The activities to be carried out in or on these lots come in two
+types: $A=A_c\cup A_s$, where the activities in $A_c$ only affect the
+field and are thus common to all crops, and the activities~$A_s$ are
+specific to each crop. Moreover, we allow each activity to occur
+multiple times, to take into account repeated sowing, harvesting,
+etc. The two types consist of the following activities:
 
 \begin{description}
-\item[Tasks common to all crops]  $ti$~for tilling, $rv$~for
+\item[Activities common to all crops]  $ti$~for tilling, $rv$~for
   rotovating, $gm$~for green manure planting, $f\!t$~for fertilizing,
   $bb$~for bed building, $si$~for setting up irrigation, $sr$ for
-  setting rows, $we$ for weeding:
+  setting rows, $we$ for weeding. Since each of these activities can
+  occur on each lot, we set
   \[
-     T_c = \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\}
+     A_c 
+     \ = \
+     \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times L \times R.
   \]
+  A typical activity in $A_c$ is therefore $(ti,\ell, i)$ for some
+  $\ell\in L$ and $i\in R$, which we write as $ti_{\ell, i}$ and which
+  means ``tilling the lot $\ell$ for the $i$-th time''. Thus,
+  $R\subset\NN$ indexes the repetitions of each activity.
 
 \smallskip
-\item[Tasks specific to a crop] $by$ for buying seeds, $ss$ for
+\item[Activities specific to a crop] $by$ for buying seeds, $ss$ for
   soaking seeds, $cs$ for cutting or separating cloned seeds, $gc$~for
   false germination and cleaning, $pl$~for planting\footnote{We
     consider transplanting and planting to be the same process.},
   $f\!u$ for fumigating, $th$ for thinning, $tr$ for trimming, $co$
   for covering, $ha$~for harvesting:
   \[
-     T_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\}
+     A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\}
+     \times C \times L \times R,
   \]
-
+  where $C$ is the set of crops. A typical activity in~$A_s$ is
+  $(ha,c,\ell, i)=ha_{c,\ell, i}$, which means ``harvesting the crop $c\in
+  C$ in the lot $\ell\in L$ for the $i$-th time''.
 \end{description}
 
-We record the precedence constraints between these tasks in a directed
-acyclic graph~$E$. Thus, $t_1\longrightarrow t_2$ (also written
-$t_1<t_2$) is a directed edge in~$E$ if $t_1$~must be completed
+The estimates $|L|=30$, $|R|=5$, $|C|=40$ yield
+\[
+    8 \times 30 \times 5 + 10 \times 40 \times 30 \times 5
+    \ = \
+    61\,200
+\]
+activities in the model, which is a very manageable figure for
+commercial solvers, and should also present few problems to free
+solvers such as CBC.
+
+We record the precedence constraints between these activities in a directed
+acyclic graph~$H$. Thus, $t_1\longrightarrow t_2$ (also written
+$t_1<t_2$) is a directed edge in~$H$ if $t_1$~must be completed
 before $t_2$~can start.
 
 \subsection{Overview of the model}
@@ -77,23 +109,23 @@ before $t_2$~can start.
 
 We separate the \emph{scheduling} part of the problem, in which the
 appropriate sequencing of events is determined, from the
-\emph{allocation} part, in which tasks and crops are assigned their
-proper place in the field. First, the optimal sequencing of events is
-determined in a way that respects the available field space and work
-force using an \emph{event-based} formulation (see below); in a second
-step, each task is allocated its proper space in the field. Separating
-the two phases makes it easier to formulate each one, and presumably
-makes them (and thus, the whole problem) easier to solve.
+\emph{allocation} part, in which activities and crops are assigned
+their proper place in the field. First, the optimal sequencing of
+events is determined in a way that respects the available field space
+and work force using an \emph{event-based} formulation (see below);
+allocation is relegated to a second step. Separating the two phases
+makes it easier to formulate each one, and presumably makes them (and
+thus, the whole problem) easier to solve.
 
 In general terms, we will plan over several years. In the final
-program, there will be an interface to put new tasks into a \emph{task
-  queue} (a set of events that is not scheduled yet), and an interface
-to record the actual progress of tasks. This act of recording the real
-start and end time of activities, environmental changes, changes in
-the available work force, etc., sets certain variables in the problem
-formulation to fixed, known values, and allows for frequent new
-optimization runs that dynamically take into account the latest
-developments.
+program, there will be an interface to put new activities into a
+\emph{task queue} (a set of events that is not scheduled yet), and an
+interface to record the actual progress of activities. This act of
+recording the real start and end time of activities, environmental
+changes, changes in the available work force, etc., sets certain
+variables in the problem formulation to fixed, known values, and
+allows Gilad to frequently update the solution of the optimization
+problem and dynamically take into account the latest developments.
 
 
 \subsection{Scheduling}
@@ -105,23 +137,30 @@ Here we follow \cite{artigues-etal11}. Put briefly, the main
 and field space by tilling the remains of the crop. Gasoline is
 renewable, but costs money.
 
-To facilitate the modelling process, we maintain the same language
-as~\cite{artigues-etal11} and use the word \emph{task} to refer to an
-element of $T=T_c\cup T_s$ as above, and the word \emph{activity} to
-refer to a task $t\in T$ executed on a specific unit lot $\ell\in
-L$. Thus, the set of activities is
-\[
-   A 
-   \ = \  
-   \big\{a_{t,\ell}:t\in T,\; \ell\in L\big\}.
-\]
+To the activities in $A$ we associate a set~$E$ of \emph{events},
+which consist of the acts of starting and finishing each activity
+in~$A$; thus, $|E|=2|A|$. Following \cite{artigues-etal11}, we
+introduce the following variables:
 
+\begin{enumerate}
+\item A set of binary decision variables 
+  \[
+     Z
+     \ = \
+     \big\{z_{a,e}: a\in A, e\in E\big\},
+  \]
+  where each $z_{a,e}=1$ if and only if activity~$a$ starts at
+  event~$e$ or is still in execution at event~$e$.
 
-The idea
-is to have ``planting a batch of tomatoes in summmer 2011'',
-``planting another batch of tomatoes in summer 2011'', and ``planting
-a third batch of tomatoes, but in the summer of 2012'' to be different
-tasks. This allows Gilad to 
+\smallskip
+\item A set of continuous variables
+  \[
+     T
+     \ = \
+     \big\{t_e : e\in E\big\}, 
+  \]
+  that indicate the starting time of each event.
+\end{enumerate}
 
 
 \subsection{Allocation}

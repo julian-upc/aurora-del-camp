@@ -7,6 +7,8 @@
 \usepackage{url}
 \usepackage{a4wide}
 
+\newcommand{\cT}{\mathcal{T}}
+
 \numberwithin{equation}{section}
 \newcommand{\ojo}[1]{\textsf{\bfseries\boldmath{#1}}}
 
@@ -36,19 +38,21 @@ without paying any license fees.
 
 \section{Event-based modeling}
 
-We first list the activities involved.
 
 \subsection{Tasks to be considered}
 
-The tasks relevant to the problem come in two types, those that only
-affect the field, and are thus common to all crops, and those that are
-specific to each crop.
+These come in two types: $T=T_c\cup T_s$, where the tasks in $T_c$
+only affect the field, and are thus common to all crops, and the
+tasks~$T_s$ are specific to each crop. They are:
 
 \begin{description}
 \item[Tasks common to all crops]  $ti$~for tilling, $rv$~for
-  rotovating, $gm$~for green manure planting, $ft$~for fertilizing,
+  rotovating, $gm$~for green manure planting, $f\!t$~for fertilizing,
   $bb$~for bed building, $si$~for setting up irrigation, $sr$ for
-  setting rows, $we$ for weeding.
+  setting rows, $we$ for weeding:
+  \[
+     T_c = \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\}
+  \]
 
 \smallskip
 \item[Tasks specific to a crop] $by$ for buying seeds, $ss$ for
@@ -56,7 +60,11 @@ specific to each crop.
   false germination and cleaning, $pl$~for planting\footnote{We
     consider transplanting and planting to be the same process.},
   $f\!u$ for fumigating, $th$ for thinning, $tr$ for trimming, $co$
-  for covering, $ha$~for harvesting.
+  for covering, $ha$~for harvesting:
+  \[
+     T_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\}
+  \]
+
 \end{description}
 
 We record the precedence constraints between these tasks in a directed
@@ -64,7 +72,7 @@ acyclic graph~$E$. Thus, $t_1\longrightarrow t_2$ (also written
 $t_1<t_2$) is a directed edge in~$E$ if $t_1$~must be completed
 before $t_2$~can start.
 
-\subsection{Events}
+\subsection{Overview of the model}
 
 
 We separate the \emph{scheduling} part of the problem, in which the
@@ -77,20 +85,46 @@ step, each task is allocated its proper space in the field. Separating
 the two phases makes it easier to formulate each one, and presumably
 makes them (and thus, the whole problem) easier to solve.
 
+In general terms, we will plan over several years. In the final
+program, there will be an interface to put new tasks into a \emph{task
+  queue} (a set of events that is not scheduled yet), and an interface
+to record the actual progress of tasks. This act of recording the real
+start and end time of activities, environmental changes, changes in
+the available work force, etc., sets certain variables in the problem
+formulation to fixed, known values, and allows for frequent new
+optimization runs that dynamically take into account the latest
+developments.
 
-Here we follow \cite{artigues-etal11}. Put briefly, the resources
-consumed are time, money and space in the fields, and money is
-produced again by selling the crops.
 
-In general terms, we will plan over several years.
+\subsection{Scheduling}
 
-As in \cite{artigues-etal11}, we index the set of tasks as
-$T=\{t_i:i\in I\}$, using an index set $I=\{1,2,\dots,n\}$. The idea
+Here we follow \cite{artigues-etal11}. Put briefly, the main
+\emph{non-renewable} resource consumed is ``time'', while some of the
+\emph{renewable} ones are ``space in the fields'', ``money'' and
+``gasoline''. Money is put back into the system by selling the crops,
+and field space by tilling the remains of the crop. Gasoline is
+renewable, but costs money.
+
+To facilitate the modelling process, we maintain the same language
+as~\cite{artigues-etal11} and use the word \emph{task} to refer to an
+element of $T=T_c\cup T_s$ as above, and the word \emph{activity} to
+refer to a task $t\in T$ executed on a specific unit lot $\ell\in
+L$. Thus, the set of activities is
+\[
+   A 
+   \ = \  
+   \big\{a_{t,\ell}:t\in T,\; \ell\in L\big\}.
+\]
+
+
+The idea
 is to have ``planting a batch of tomatoes in summmer 2011'',
 ``planting another batch of tomatoes in summer 2011'', and ``planting
 a third batch of tomatoes, but in the summer of 2012'' to be different
 tasks. This allows Gilad to 
 
+
+\subsection{Allocation}
 
 
 \subsection{Objective function}

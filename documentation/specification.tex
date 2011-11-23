@@ -69,8 +69,8 @@ etc. The two types consist of the following activities:
      \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times L \times R.
   \]
   A typical activity in $A_c$ is therefore $(ti,\ell, i)$ for some
-  $\ell\in L$ and $i\in R$, which we write as $ti_{\ell, i}$ and which
-  means ``tilling the lot $\ell$ for the $i$-th time''. Thus,
+  $\ell\in L$ and $i\in R$, which we write as $ti_{\ell, i}$ and take
+  to mean ``tilling the lot $\ell$ for the $i$-th time''. Thus,
   $R\subset\NN$ indexes the repetitions of each activity.
 
 \smallskip
@@ -89,7 +89,7 @@ etc. The two types consist of the following activities:
   C$ in the lot $\ell\in L$ for the $i$-th time''.
 \end{description}
 
-The estimates $|L|=30$, $|R|=5$, $|C|=40$ yield
+The estimates $|L|=30$, $|R|=5$, $|C|=40$ yield an upper bound of
 \[
     8 \times 30 \times 5 + 10 \times 40 \times 30 \times 5
     \ = \
@@ -139,8 +139,9 @@ renewable, but costs money.
 
 To the activities in $A$ we associate a set~$E$ of \emph{events},
 which consist of the acts of starting and finishing each activity
-in~$A$; thus, $|E|=2|A|$. Following \cite{artigues-etal11}, we
-introduce the following variables:
+in~$A$; thus, $|E|=2|A|=:n$. In consequence, we may consider
+$E=\{1,2,\dots, 2|A|=n\}$ to be totally ordered.  Following
+\cite{artigues-etal11}, we introduce the following variables:
 
 \begin{enumerate}
 \item A set of binary decision variables 
@@ -162,6 +163,39 @@ introduce the following variables:
   that indicate the starting time of each event.
 \end{enumerate}
 
+We now adapt the individual constraints from~\cite{artigues-etal11}:
+
+\begin{description}
+
+\item[Not all activities have to execute] We do \emph{not} incorporate
+  a constraint $\sum_{e\in E} z_{a,e}=1$ for all $e\in A$, because we
+  do not wish to require all activities to execute. This leaves Gilad margin
+  to define activities such as ``sowing and harvesting beans for the
+  fifth time'' that may or may not take place, but where the decision
+  on them having take place or not rests with the optimization problem
+  and is not an a-priori input to the problem formulation.
+
+\item[Start at time 0] Setting
+  \[
+     t_0
+     \ = \
+     0
+  \]
+  makes sense, and we do so.
+
+\item[Ordering the execution starts]
+  \[
+     t_{e+1} 
+     \ \ge \
+     t_e
+     \qquad\text{for all }
+      e\in E\text{ with }
+      e\ne n-1
+  \]
+
+\item 
+\end{description}
+
 
 \subsection{Allocation}
 
@@ -176,6 +210,11 @@ The objective function we want to  maximize is thus
    \ = \
    \sum_{c\in C, y\in Y} y_{c,w} \sum_{a\in A} x_{c,w,a}
 \]
+
+\subsection{Optimizations in the problem formulation}
+
+As remarked in \cite{artigues-etal11}, there is no need to create
+events for the ending of the last activities. 
 
 \section{Server-side technology}
 

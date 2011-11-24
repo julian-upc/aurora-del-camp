@@ -1,4 +1,4 @@
-\documentclass[11pt]{amsart}
+\documentclass[11pt,reqno]{amsart}
 
 \usepackage{times}
 \usepackage{microtype}
@@ -20,6 +20,10 @@
 
 \renewcommand*\descriptionlabel[1]{%
 \hspace\labelsep\normalfont\itshape #1:}
+
+\newenvironment{mydesc}{%
+  \begin{description}\setlength{\itemsep}{1ex}}%
+  {\end{description}}
 
 \title{Aurora del Camp -- specification}
 \author{Julian Pfeifle}
@@ -59,7 +63,7 @@ each activity to occur multiple times, to take into account repeated sowing, har
 etc, and collect the indices of the possible repetitions into a set $R\subset\NN$.  Gilad
 breaks these two types of activities down as follows:
 
-\begin{description}
+\begin{mydesc}
 \item[Activities common to all crops]  $ti$~for tilling, $rv$~for
   rotovating, $gm$~for green manure planting, $f\!t$~for fertilizing,
   $bb$~for bed building, $si$~for setting up irrigation, $sr$ for
@@ -74,7 +78,7 @@ breaks these two types of activities down as follows:
   $\ell\in L$ and $i\in R$, which we write as $ti_{\ell, i}$ and take
   to mean ``tilling the lot $\ell$ for the $i$-th time''.
 
-\smallskip
+
 \item[Activities specific to a crop] $by$ for buying seeds, $ss$ for
   soaking seeds, $cs$ for cutting or separating cloned seeds, $gc$~for
   false germination and cleaning, $pl$~for planting\footnote{We
@@ -88,7 +92,7 @@ breaks these two types of activities down as follows:
   where $C$ is the set of crops. A typical activity in~$A_s$ is therefore
   $(ha,c,\ell, i)=ha_{c,\ell, i}$, which means ``harvesting the crop $c\in
   C$ in the lot $\ell\in L$ for the $i$-th time''.
-\end{description}
+\end{mydesc}
 
 The estimates $|L|=30$, $|R|=5$, $|C|=40$ yield an upper bound of
 \[
@@ -108,10 +112,10 @@ graph~$H$. Thus, $t_1\lra t_2$ (also written $t_1<t_2$) is a directed edge
 in~$H$ if $t_1$~must be completed before $t_2$~can start. Some sample precedence
 constraints are the following:
 
-\begin{description}
+\begin{mydesc}
 \item[Earlier repetitions execute before later ones] Thus, $x_{c,\ell,i}\lra
   x_{c,\ell,j}$ is an edge in~$H$ if $i<j$.
-\end{description}
+\end{mydesc}
 
 \subsection{Overview of the model}
 
@@ -150,7 +154,7 @@ To the activities in $A$ we associate a set~$E$ of \emph{events},
 which consist of the acts of starting and finishing each activity
 in~$A$; thus, $|E|=2|A|=:n$. In consequence, we may consider
 $E=\{1,2,\dots, 2|A|=n\}$ to be totally ordered.  Following
-\cite{artigues-etal11}, we introduce the following variables:
+\cite{artigues-etal11}, we introduce the following variables and data:
 
 \begin{enumerate}
 \item A set of binary decision variables 
@@ -163,19 +167,25 @@ $E=\{1,2,\dots, 2|A|=n\}$ to be totally ordered.  Following
   event~$e$ or is still in execution at event~$e$.
 
 \smallskip
-\item A set of continuous variables
+\item A set of continuous variables that indicate the starting time of each event:
   \[
      T
      \ = \
-     \big\{t_e : e\in E\big\}, 
+     \big\{t_e : e\in E\big\}
   \]
-  that indicate the starting time of each event.
+
+\smallskip
+\item The set of \emph{processing times} for each activity:
+  \[
+      \{p_a:a\in A\}
+  \]  
 \end{enumerate}
 
 We now adapt the individual constraints from~\cite{artigues-etal11}:
 
-\renewcommand{\arraystretch}{3}
-\begin{description}
+
+
+\begin{mydesc}
 
 \item[Not all activities have to execute] We do \emph{not} incorporate a constraint
   $\sum_{e\in E} z_{a,e}=1$ for all $a\in A$, because we do not wish to require all
@@ -189,26 +199,60 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   learned from the optimization process. We'll see how this works out.
 
 \item[Setting the starting time] Instead of using $t_0=0$, we set
-  \[
+  \begin{equation}
      t_0
      \ = \
      w_0,
-  \]
+  \end{equation}
   where $w_0$ indexes the week of the year where optimization starts. In general, using
   weeks as units for time seems to be a good idea.
 
 \item[Ordering the execution starts]
-  \[
+  \begin{equation}
      t_{e+1} 
      \ \ge \
      t_e
      \qquad\text{for all }
-      e\in E\text{ with }
-      e\ne n-1
-  \]
+      e\in\{1,2,\dots,n-1\}
+  \end{equation}
 
-\item 
-\end{description}
+\item[Duration constraints]
+  \begin{equation}
+     t_f 
+     \ \ge \
+     t_e + \big((z_{a,e} - z_{a,e-1} ) - (z_{a,f} - z_{a,f-1}) - 1\big) p_a
+     \qquad\text{for all } f>e\in E,\; a\in A
+  \end{equation}
+  As discussed in \cite{artigues-etal11}, these constraints ensure that,
+if activity $a$ starts at event $e$ and ends at~$f$, then the time difference between  $f$
+and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
+
+\item[Contiguity constraints] As proved in \cite[Proposition 1]{artigues-etal11a}, the
+  constraints
+  \begin{eqnarray}
+    \sum_{i=1}^{e-1} z_{a,i}
+    &\le&
+    \phantom{(n-e)}\llap{$e$}\,\big(1-(z_{a,e} - z_{a,e-1})\big)
+    \qquad\text{for all } e\in\{2,3,\dots, n\},\; a\in A
+    \\
+    \sum_{i=e}^n z_{a,i}
+    &\le&
+    (n-e)\,\big(1+(z_{a,e} - z_{a,e-1})\big)
+    \qquad\text{for all } e\in\{2,3,\dots, n\},\; a\in A
+  \end{eqnarray}
+  ensure \emph{non-preemption}, i.e., the events after which the activity $a$ is being
+  processed are adjacent.
+
+\item[Precedence constraints] The implication $(z_{a,e}=1) \Longrightarrow
+  \big(\sum_{i=1}^{e} z_{b,i}=0\big)$ that describes the directed edge $a\lra b\in H$ for
+  each event~$e$ is modeled by the linear inequality
+  \begin{equation}
+     z_{a,e} + \sum_{i=1}^e z_{b,i}
+     \ \le \
+     1+(1-z_{a,e})e.
+  \end{equation}
+
+\end{mydesc}
 
 \subsection{Objective function}
 

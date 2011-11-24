@@ -234,7 +234,7 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
      \ \ge \
      t_e
      \qquad\text{for all }
-      e\in\{1,2,\dots,n-1\}
+      e\in E\smallsetminus\{n\}
   \end{equation}
 
 \item[Duration constraints]
@@ -254,12 +254,12 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
     \sum_{i=1}^{e-1} z_{a,i}
     &\le&
     \phantom{(n-e)}\llap{$e$}\,\big(1-(z_{a,e} - z_{a,e-1})\big)
-    \qquad\text{for all } e\in\{2,3,\dots, n\},\; a\in A
+    \qquad\text{for all } e\in E\smallsetminus\{1\},\; a\in A
     \\
     \sum_{i=e}^n z_{a,i}
     &\le&
     (n-e)\,\big(1+(z_{a,e} - z_{a,e-1})\big)
-    \qquad\text{for all } e\in\{2,3,\dots, n\},\; a\in A
+    \qquad\text{for all } e\in E\smallsetminus\{1\},\; a\in A
   \end{eqnarray}
   ensure \emph{non-preemption}, i.e., the events after which the activity $a$ is being
   processed are adjacent.
@@ -270,7 +270,8 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
   \begin{equation}
      z_{a,e} + \sum_{i=1}^e z_{b,i}
      \ \le \
-     1+(1-z_{a,e})e.
+     1+(1-z_{a,e})e
+     \qquad\text{for all } e\in E,\; a\lra b\in H
   \end{equation}
 
 \item[Space constraints] At any given time, all current activities must take up no more

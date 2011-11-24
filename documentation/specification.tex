@@ -140,21 +140,27 @@ variables in the problem formulation to fixed, known values, and
 allows Gilad to frequently update the solution of the optimization
 problem and dynamically take into account the latest developments.
 
-
 \section{Scheduling}
 
-Here we follow \cite{artigues-etal11}. Put briefly, the main
-\emph{non-renewable} resource consumed is ``time'', while some of the
-\emph{renewable} ones are ``space in the fields'', ``money'' and
-``gasoline''. Money is put back into the system by selling the crops,
-and field space by tilling the remains of the crop. Gasoline is
-renewable, but costs money.
+Before we start with the model, we remark that the setup in \cite{artigues-etal11} allows
+for incorporating constraints on resources. The main \emph{non-renewable} resource that
+comes to mind is ``time'', while some  \emph{renewable} ones are ``space in the
+fields'', ``money'' and ``gasoline''. Money is put back into the system by selling 
+crops, and field space by tilling the remains of the crop. Gasoline is renewable, but
+costs money.
 
-To the activities in $A$ we associate a set~$E$ of \emph{events},
-which consist of the acts of starting and finishing each activity
-in~$A$; thus, $|E|=2|A|=:n$. In consequence, we may consider
-$E=\{1,2,\dots, 2|A|=n\}$ to be totally ordered.  Following
-\cite{artigues-etal11}, we introduce the following variables and data:
+Of these resources, the only one we need to model explicitly at this point is field
+space. The resource ``time'' is handled by the processing times introduced below. I do not
+have sufficient understanding at the moment to know whether use of gasoline can be
+optimized or not. Money will be handled by the objective function.
+
+\subsection{Variables}
+
+We now proceed to model our problem.  To the activities in $A$ we associate a set~$E$ of
+\emph{events}, which consist of the acts of starting and finishing each activity in~$A$;
+thus, $|E|=2|A|=:n$. In consequence, we may consider $E=\{1,2,\dots, 2|A|=n\}$ to be
+totally ordered.  Following \cite{artigues-etal11}, we introduce the following variables
+and data:
 
 \begin{enumerate}
 \item A set of binary decision variables 
@@ -179,11 +185,26 @@ $E=\{1,2,\dots, 2|A|=n\}$ to be totally ordered.  Following
   \[
       \{p_a:a\in A\}
   \]  
+  These must be estimated from experience, and are necessarily averages. One way to take
+  into account variations in the number of hands available on the farm could be the
+  following: The processing times stored in the database are the times it would take one
+  worker to complete each task. In the user interface, there will be a field to enter the
+  current number of available helpers. Each time the current optimization problem is
+  generated, the processing times in the database are divided by the number of available
+  workers before being written to the optimization file. More sophisticated setups are
+  possible, but will be relegated to a future stage of development.
+
+\smallskip
+\item The total field space available, $S$, and the space taken up
+  by each activity,
+  \[
+      \{s_a : a\in A\}
+  \]
 \end{enumerate}
 
+\subsection{Constraints}
+
 We now adapt the individual constraints from~\cite{artigues-etal11}:
-
-
 
 \begin{mydesc}
 
@@ -252,6 +273,13 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
      1+(1-z_{a,e})e.
   \end{equation}
 
+\item[Space constraints] At any given time, all current activities must take up no more
+  than the entire available space:
+  \begin{equation}
+    \sum_{e=1}^n s_a \, z_{a,e} 
+    \ \le \
+    S \qquad\text{for all } a\in A
+  \end{equation}
 \end{mydesc}
 
 \subsection{Objective function}

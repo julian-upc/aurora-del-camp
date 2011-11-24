@@ -11,13 +11,15 @@
 \newcommand{\NN}{\mathbbm{N}}
 \newcommand{\ZZ}{\mathbbm{Z}}
 
+\newcommand{\lra}{\longrightarrow}
+
 \numberwithin{equation}{section}
 \newcommand{\ojo}[1]{\textsf{\bfseries\boldmath{#1}}}
 
 \begin{document}
 
 \renewcommand*\descriptionlabel[1]{%
-\hspace\labelsep\normalfont\itshape #1:}.
+\hspace\labelsep\normalfont\itshape #1:}
 
 \title{Aurora del Camp -- specification}
 \author{Julian Pfeifle}
@@ -50,19 +52,19 @@ available fields. We refer to these parts or areas as \emph{lots}, and
 collect them into a set~$L$. We allow them to have different
 sizes.
 
-The activities to be carried out in or on these lots come in two
-types: $A=A_c\cup A_s$, where the activities in $A_c$ only affect the
-field and are thus common to all crops, and the activities~$A_s$ are
-specific to each crop. Moreover, we allow each activity to occur
-multiple times, to take into account repeated sowing, harvesting,
-etc. The two types consist of the following activities:
+The activities to be carried out in or on these lots come in two types: $A=A_c\cup A_s$,
+where the activities in $A_c$ only affect the field and are thus \emph{``common''} to all
+crops, and the activities~$A_s$ are \emph{``specific''} to each crop. Moreover, we allow
+each activity to occur multiple times, to take into account repeated sowing, harvesting,
+etc, and collect the indices of the possible repetitions into a set $R\subset\NN$.  Gilad
+breaks these two types of activities down as follows:
 
 \begin{description}
 \item[Activities common to all crops]  $ti$~for tilling, $rv$~for
   rotovating, $gm$~for green manure planting, $f\!t$~for fertilizing,
   $bb$~for bed building, $si$~for setting up irrigation, $sr$ for
   setting rows, $we$ for weeding. Since each of these activities can
-  occur on each lot, we set
+  occur on each lot, and be repeated, we set
   \[
      A_c 
      \ = \
@@ -70,8 +72,7 @@ etc. The two types consist of the following activities:
   \]
   A typical activity in $A_c$ is therefore $(ti,\ell, i)$ for some
   $\ell\in L$ and $i\in R$, which we write as $ti_{\ell, i}$ and take
-  to mean ``tilling the lot $\ell$ for the $i$-th time''. Thus,
-  $R\subset\NN$ indexes the repetitions of each activity.
+  to mean ``tilling the lot $\ell$ for the $i$-th time''.
 
 \smallskip
 \item[Activities specific to a crop] $by$ for buying seeds, $ss$ for
@@ -79,12 +80,12 @@ etc. The two types consist of the following activities:
   false germination and cleaning, $pl$~for planting\footnote{We
     consider transplanting and planting to be the same process.},
   $f\!u$ for fumigating, $th$ for thinning, $tr$ for trimming, $co$
-  for covering, $ha$~for harvesting:
+  for covering, $ha$~for harvesting. We assemble these into
   \[
      A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\}
      \times C \times L \times R,
   \]
-  where $C$ is the set of crops. A typical activity in~$A_s$ is
+  where $C$ is the set of crops. A typical activity in~$A_s$ is therefore
   $(ha,c,\ell, i)=ha_{c,\ell, i}$, which means ``harvesting the crop $c\in
   C$ in the lot $\ell\in L$ for the $i$-th time''.
 \end{description}
@@ -99,10 +100,18 @@ activities in the model, which is a very manageable figure for
 commercial solvers, and should also present few problems to free
 solvers such as CBC.
 
-We record the precedence constraints between these activities in a directed
-acyclic graph~$H$. Thus, $t_1\longrightarrow t_2$ (also written
-$t_1<t_2$) is a directed edge in~$H$ if $t_1$~must be completed
-before $t_2$~can start.
+
+\subsection{Precedence constraints}
+
+We record the precedence constraints between these activities in a directed acyclic
+graph~$H$. Thus, $t_1\lra t_2$ (also written $t_1<t_2$) is a directed edge
+in~$H$ if $t_1$~must be completed before $t_2$~can start. Some sample precedence
+constraints are the following:
+
+\begin{description}
+\item[Earlier repetitions execute before later ones] Thus, $x_{c,\ell,i}\lra
+  x_{c,\ell,j}$ is an edge in~$H$ if $i<j$.
+\end{description}
 
 \subsection{Overview of the model}
 
@@ -128,7 +137,7 @@ allows Gilad to frequently update the solution of the optimization
 problem and dynamically take into account the latest developments.
 
 
-\subsection{Scheduling}
+\section{Scheduling}
 
 Here we follow \cite{artigues-etal11}. Put briefly, the main
 \emph{non-renewable} resource consumed is ``time'', while some of the
@@ -165,23 +174,28 @@ $E=\{1,2,\dots, 2|A|=n\}$ to be totally ordered.  Following
 
 We now adapt the individual constraints from~\cite{artigues-etal11}:
 
+\renewcommand{\arraystretch}{3}
 \begin{description}
 
-\item[Not all activities have to execute] We do \emph{not} incorporate
-  a constraint $\sum_{e\in E} z_{a,e}=1$ for all $e\in A$, because we
-  do not wish to require all activities to execute. This leaves Gilad margin
-  to define activities such as ``sowing and harvesting beans for the
-  fifth time'' that may or may not take place, but where the decision
-  on them having take place or not rests with the optimization problem
-  and is not an a-priori input to the problem formulation.
+\item[Not all activities have to execute] We do \emph{not} incorporate a constraint
+  $\sum_{e\in E} z_{a,e}=1$ for all $a\in A$, because we do not wish to require all
+  activities to execute. This leaves Gilad margin to queue activities such as ``sowing and
+  harvesting beans for the fifth time'' that may or may not take place, but where the
+  decision on them having take place or not is an outcome of the optimization process and
+  not an a-priori input to the problem formulation.
 
-\item[Start at time 0] Setting
+  Initially, it therefore seems to be a good idea to queue more repetitions of activities
+  than could reasonably be undertaken, so that the optimal number of repetitions may be
+  learned from the optimization process. We'll see how this works out.
+
+\item[Setting the starting time] Instead of using $t_0=0$, we set
   \[
      t_0
      \ = \
-     0
+     w_0,
   \]
-  makes sense, and we do so.
+  where $w_0$ indexes the week of the year where optimization starts. In general, using
+  weeks as units for time seems to be a good idea.
 
 \item[Ordering the execution starts]
   \[
@@ -196,10 +210,6 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
 \item 
 \end{description}
 
-
-\subsection{Allocation}
-
-
 \subsection{Objective function}
 
 Each crop $c\in C$ has a yield of  $y_{c,w}$, depending on the week
@@ -211,8 +221,18 @@ The objective function we want to  maximize is thus
    \sum_{c\in C, y\in Y} y_{c,w} \sum_{a\in A} x_{c,w,a}
 \]
 
-\subsection{Optimizations in the problem formulation}
 
+\section{Allocation}
+
+
+\section{Implementing and optimizing the problem formulation}
+
+\subsection{Implementation}
+
+We will probably use either PHP or Python to generate the input file to the optimizer from
+a database of constraints and other data.
+
+\subsection{Optimizations}
 As remarked in \cite{artigues-etal11}, there is no need to create
 events for the ending of the last activities. 
 

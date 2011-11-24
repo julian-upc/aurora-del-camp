@@ -59,39 +59,44 @@ sizes.
 The activities to be carried out in or on these lots come in two types: $A=A_c\cup A_s$,
 where the activities in $A_c$ only affect the field and are thus \emph{``common''} to all
 crops, and the activities~$A_s$ are \emph{``specific''} to each crop. Moreover, we allow
-each activity to occur multiple times, to take into account repeated sowing, harvesting,
-etc, and collect the indices of the possible repetitions into a set $R\subset\NN$.  Gilad
-breaks these two types of activities down as follows:
+each activity to occur multiple times in different time windows, to take into account
+repeated sowing, harvesting, etc. We keep track of the repetitions by remembering, for
+each activity, a \emph{valid start time window} $\omega_{\rm start} = [w_1, w_2]$ of weeks
+in which it may begin. This has the added advantage that certain characteristics of the
+activity, such as the duration or the yield, may depend on the start time. We let
+$W$~denote the set of all useful start time windows $\omega = \omega_{\rm start}$, i.e.,
+all intervals contained in the planning horizon of the problem that are eligible for
+starting a task.
+
+Gilad breaks these two types of activities down as follows:
 
 \begin{mydesc}
-\item[Activities common to all crops]  $ti$~for tilling, $rv$~for
-  rotovating, $gm$~for green manure planting, $f\!t$~for fertilizing,
-  $bb$~for bed building, $si$~for setting up irrigation, $sr$ for
-  setting rows, $we$ for weeding. Since each of these activities can
-  occur on each lot, and be repeated, we set
+\item[Activities common to all crops] $ti$~for tilling, $rv$~for rotovating, $gm$~for
+  green manure planting, $f\!t$~for fertilizing, $bb$~for bed building, $si$~for setting
+  up irrigation, $sr$ for setting rows, $we$ for weeding. Since each of these activities
+  can occur on each lot, and be repeated, we set
   \[
      A_c 
      \ = \
-     \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times L \times R.
+     \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times L \times W.
   \]
-  A typical activity in $A_c$ is therefore $(ti,\ell, i)$ for some
-  $\ell\in L$ and $i\in R$, which we write as $ti_{\ell, i}$ and take
-  to mean ``tilling the lot $\ell$ for the $i$-th time''.
+  A typical activity in $A_c$ is therefore $(ti,\ell, \omega)$ for some $\ell\in L$ and
+  $\omega\in W$, which we write as $ti_{\ell, \omega}$ and take to mean ``tilling the lot
+  $\ell$ starting in the window~$\omega$''.
 
 
-\item[Activities specific to a crop] $by$ for buying seeds, $ss$ for
-  soaking seeds, $cs$ for cutting or separating cloned seeds, $gc$~for
-  false germination and cleaning, $pl$~for planting\footnote{We
-    consider transplanting and planting to be the same process.},
-  $f\!u$ for fumigating, $th$ for thinning, $tr$ for trimming, $co$
-  for covering, $ha$~for harvesting. We assemble these into
+\item[Activities specific to a crop] $by$ for buying seeds, $ss$ for soaking seeds, $cs$
+  for cutting or separating cloned seeds, $gc$~for false germination and cleaning,
+  $pl$~for planting\footnote{We consider transplanting and planting to be the same
+    process.}, $gr$ for growing, $f\!u$ for fumigating, $th$ for thinning, $tr$ for
+  trimming, $co$ for covering, $ha$~for harvesting. We assemble these into
   \[
      A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\}
-     \times C \times L \times R,
+     \times C \times L \times W,
   \]
-  where $C$ is the set of crops. A typical activity in~$A_s$ is therefore
-  $(ha,c,\ell, i)=ha_{c,\ell, i}$, which means ``harvesting the crop $c\in
-  C$ in the lot $\ell\in L$ for the $i$-th time''.
+  where $C$ is the set of crops. A typical activity in~$A_s$ is therefore $(ha,c,\ell,
+  \omega)=ha_{c,\ell, \omega}$, which means ``harvesting the crop $c\in C$ in the lot
+  $\ell\in L$, starting during the window~$\omega$''.
 \end{mydesc}
 
 The estimates $|L|=30$, $|R|=5$, $|C|=40$ yield an upper bound of
@@ -104,18 +109,45 @@ activities in the model, which is a very manageable figure for
 commercial solvers, and should also present few problems to free
 solvers such as CBC.
 
-
 \subsection{Precedence constraints}
 
-We record the precedence constraints between these activities in a directed acyclic
+We record the precedence constraints between  activities in a directed acyclic
 graph~$H$. Thus, $t_1\lra t_2$ (also written $t_1<t_2$) is a directed edge
-in~$H$ if $t_1$~must be completed before $t_2$~can start. Some sample precedence
-constraints are the following:
+in~$H$ if $t_1$~must be completed before $t_2$~can start. 
 
-\begin{mydesc}
-\item[Earlier repetitions execute before later ones] Thus, $x_{c,\ell,i}\lra
-  x_{c,\ell,j}$ is an edge in~$H$ if $i<j$.
-\end{mydesc}
+\subsection{Chains}
+We further group activities into \emph{chains}, or activities that must go
+together. For example,
+\[
+   \chi
+   \ = \
+   \big(pl_{c,\ell,[w_0,w_1]}, \;
+    we_{\ell,[w_2,w_3]},\;
+    we_{\ell,[w_3,w_4]},\;
+    gr_{\ell,[w_1,w_4]},\;
+    ha_{c,\ell,[w_4,w_5]}\big)
+\]
+with $w_0<w_1<w_2<w_3<w_4<w_5$
+is a chain consisting of planting, weeding, and harvesting a crop $c$ in a lot~$\ell$ that
+needs $w_4-w_1$~weeks to grow. The directed graph~$H$ records that in this particular
+chain, \emph{growing} and \emph{weeding} may be carried out in parallel, but both these
+activities come after \emph{planting} and before \emph{harvesting}. In general, the set of
+all chains is denoted by~$K$, and if the first activity in a chain~$\chi$ is executed, all
+the others must be executed too. Some conditions that may be expressed using this language
+are the following.
+
+\begin{itemize}
+\item Tomatoes planted in week 25 can be harvested in week 26, but tomatoes planted in
+  week 40 can be harvested only in week 45.
+\item \emph{``A head of lettuce planted in summer must be harvested the week after it is planted,
+  but if it is planted in winter, it can stay in the ground for up to two months.''} This
+can be modeled as
+\[
+  ...
+\]
+\end{itemize}
+
+
 
 \subsection{Overview of the model}
 
@@ -231,6 +263,8 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   than could reasonably be undertaken, so that the optimal number of repetitions may be
   learned from the optimization process. We'll see how this works out.
 
+\item[Activities in a chain must go together] \ojo{implement me}
+
 \item[Setting the starting time] Instead of using $t_0=0$, we set
   \begin{equation}
      t_0
@@ -248,6 +282,13 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
      \qquad\text{for all }
       e\in E\smallsetminus\{n\}
   \end{equation}
+
+\item[Execution start constraints] Relations that implement start time windows:
+  \begin{equation}
+    w_{1,e}\ \le\ t_e \ \le \ w_{2,e}
+    \qquad\text{for all } e\in E
+  \end{equation}
+  
 
 \item[Duration constraints]
   \begin{equation}

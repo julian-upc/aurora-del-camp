@@ -185,21 +185,33 @@ and data:
   \[
       \{p_a:a\in A\}
   \]  
-  These must be estimated from experience, and are necessarily averages. One way to take
-  into account variations in the number of hands available on the farm could be the
-  following: The processing times stored in the database are the times it would take one
-  worker to complete each task. In the user interface, there will be a field to enter the
-  current number of available helpers. Each time the current optimization problem is
-  generated, the processing times in the database are divided by the number of available
-  workers before being written to the optimization file. More sophisticated setups are
-  possible, but will be relegated to a future stage of development.
+  These must be estimated from experience, and are necessarily averages. There are two
+  issues here:
+  \begin{description}
+  \item[Variations in the number of hands available on the farm] One way to take these
+    into account could be the following: The processing times stored in the database are
+    the times it would take one worker to complete each task. In the user interface, there
+    will be a field to enter the current number of available helpers. Each time the
+    current optimization problem is generated, the processing times in the database are
+    divided by the number of available workers before being written to the optimization
+    file. More sophisticated setups are possible, but will be relegated to a future stage
+    of development.
 
-\smallskip
+  \item[Seasonal variations] The processing time of some activities varies with the moment
+    of the year in which they are executed. For example, Gilad states that growing lettuce
+    in August just takes one month, but three months if they are planted in October.
+  \end{description}
+  \smallskip
 \item The total field space available, $S$, and the space taken up
   by each activity,
   \[
       \{s_a : a\in A\}
   \]
+
+\smallskip
+\item The yield $y_{c,w}$ of each crop $c\in C$, depending on the week $w\in W$ in which
+  it is planted.
+
 \end{enumerate}
 
 \subsection{Constraints}
@@ -285,8 +297,6 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
 
 \subsection{Objective function}
 
-Each crop $c\in C$ has a yield of  $y_{c,w}$, depending on the week
-$w\in W$ it is planted. 
 The objective function we want to  maximize is thus
 \[
    f 

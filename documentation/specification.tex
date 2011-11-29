@@ -202,26 +202,23 @@ and data:
   \]
 
 \smallskip
-\item The set of \emph{processing times} for each activity:
+\item The set of continuous \emph{processing times} for each activity:
   \[
       \{p_a:a\in A\}
   \]  
-  These must be estimated from experience, and are necessarily averages. There are two
-  issues here:
-  \begin{description}
-  \item[Variations in the number of hands available on the farm] One way to take these
-    into account could be the following: The processing times stored in the database are
-    the times it would take one worker to complete each task. In the user interface, there
-    will be a field to enter the current number of available helpers. Each time the
-    current optimization problem is generated, the processing times in the database are
-    divided by the number of available workers before being written to the optimization
-    file. More sophisticated setups are possible, but will be relegated to a future stage
-    of development.
+  These must be estimated from experience, and are necessarily averages. Moreover, the
+  processing times will often depend on when each activity is started.
 
-  \item[Seasonal variations] The processing time of some activities varies with the moment
-    of the year in which they are executed. For example, Gilad states that growing lettuce
-    in August just takes one month, but three months if they are planted in October.
-  \end{description}
+  Another issue is to take into account possible variations in the number of hands
+  available on the farm. One way to do this could be that the processing times stored in
+  the database are the times it would take \emph{one} worker to complete each task. In the
+  user interface, there will be a field to enter an estimate for the number of available
+  helpers in each week of the year. Each time that a new instance of the optimization
+  problem is generated, the processing times for the jobs in each chain in the database
+  are divided by the number of available workers before being written to the optimization
+  file. More sophisticated setups are of course possible, and we'll probably implement one
+  of them before we're done.
+
   \smallskip
 \item The total field space available, $S$, and the space taken up
   by each activity,
@@ -252,7 +249,12 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   than could reasonably be undertaken, so that the optimal number of repetitions may be
   learned from the optimization process. We'll see how this works out.
 
-\item[Activities in a chain must go together] \ojo{implement me}
+\item[Activities in a chain must go together] The fact that either all or none of the
+  activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed via
+  the equality of the corresponding 0/1-variables:
+  \begin{equation}
+    a_1 \ = \ a_2 \ = \ \dots \ = \ a_r.
+  \end{equation}
 
 \item[Setting the starting time] Instead of using $t_0=0$, we set
   \begin{equation}
@@ -330,9 +332,9 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
 We may also incorporate constraints that come from the way crops behave. For example,
 Gilad gives the example that \emph{``A head of lettuce planted in summer must be harvested
   the week after it is planted, but if it is planted in winter, it can stay in the ground
-  for up to two months.''} This can be modeled via a set of chains 
+  for up to two months.''} This can be modeled via a sequence of chains 
 \begin{eqnarray*}
-   \chi_{25} 
+   \chi_{\text{lettuce},\, \text{\#42},\, 25} 
    &=& 
    \big(
       pl_{\text{lettuce},\, \text{\#42},\, 25}, \; 
@@ -340,7 +342,7 @@ Gilad gives the example that \emph{``A head of lettuce planted in summer must be
       gr_{\text{lettuce},\, \text{\#42},\, [25,26]}, \;
       ha_{\text{lettuce},\, \text{\#42},\, [25,26]}
       \big), \\
-   \chi_{26} 
+   \chi_{\text{lettuce},\, \text{\#42},\, 26} 
    &=& 
    \big(
       pl_{\text{lettuce},\, \text{\#42},\, 26}, \; 
@@ -349,7 +351,7 @@ Gilad gives the example that \emph{``A head of lettuce planted in summer must be
       ha_{\text{lettuce},\, \text{\#42},\, [26,27]}
       \big), \\
    &\dots& \\
-   \chi_{35} 
+   \chi_{\text{lettuce},\, \text{\#42},\, 35} 
    &=& 
    \big(
       pl_{\text{lettuce},\, \text{\#42},\, 35}, \; 
@@ -361,9 +363,9 @@ Gilad gives the example that \emph{``A head of lettuce planted in summer must be
 that say that lettuces \emph{planted} from the middle of June (week 25) to the last week
 of August (week 35) in a certain lot (\#42 in this example) must be \emph{weeded} exactly
 once, need one week to \emph{grow}, and must be \emph{harvested} one week after planting;
-and a set of chains
+and a sequence of chains
 \begin{eqnarray*}
-    \chi_{47} 
+    \chi_{\text{lettuce},\, \text{\#42},\, 47} 
    &=& 
    \big(
       pl_{\text{lettuce},\, \text{\#42},\, 47}, \; 
@@ -374,7 +376,7 @@ and a set of chains
       gr_{\text{lettuce},\, \text{\#42},\, [47,55]}, \;
       ha_{\text{lettuce},\, \text{\#42},\, [47,55]} \;
       \big), \\
-    \chi_{48} 
+    \chi_{\text{lettuce},\, \text{\#42},\, 48} 
    &=& 
    \big(
       pl_{\text{lettuce},\, \text{\#42},\, 48}, \; 
@@ -386,7 +388,7 @@ and a set of chains
       ha_{\text{lettuce},\, \text{\#42},\, [48,56]} \;
       \big), \\
    &\dots& \\
-   \chi_{56} 
+   \chi_{\text{lettuce},\, \text{\#42},\, 56} 
    &=& 
    \big(
       pl_{\text{lettuce},\, \text{\#42},\, 56}, \; 
@@ -400,7 +402,7 @@ and a set of chains
 \end{eqnarray*}
 that express that if a head of lettuce is planted between the third week of November (week 47)
 and the last week of January (week 56), up to eight weeks can pass before it must be
-harvested; in exchange for that, we must weed three times. 
+harvested ($56+8=64$); in exchange for that, we must weed three times. 
 
 
 \subsection{Objective function}

@@ -63,12 +63,16 @@ each activity to occur multiple times in different time windows, to take into ac
 repeated sowing, harvesting, etc. We keep track of the repetitions by remembering, for
 each activity, a \emph{valid start time window} $\omega_{\rm start} = [w_1, w_2]$ of weeks
 in which it may begin. This has the added advantage that certain characteristics of the
-activity, such as the duration or the yield, may depend on the start time. We let
-$W$~denote the set of all useful start time windows $\omega = \omega_{\rm start}$, i.e.,
-all intervals contained in the planning horizon of the problem that are eligible for
-starting a task.
+activity, such as the duration or the yield, may depend on the start time. For example,
+\emph{``planting tomatoes in week 34 or 35''} and \emph{``planting tomatoes in week 48 or
+  49''} will be separate activities, each with distinct durations and yield. The
+optimization process will determine whether to carry out none, one or both of these
+activities. As an abstract notation, we write~$W$ for the set of all useful start time
+windows $\omega = \omega_{\rm start}$, i.e., all intervals contained in the planning
+horizon of the problem that are eligible for starting a task.
 
-Gilad breaks these two types of activities down as follows:
+\smallskip
+Gilad breaks the two types of activities down as follows:
 
 \begin{mydesc}
 \item[Activities common to all crops] $ti$~for tilling, $rv$~for rotovating, $gm$~for
@@ -82,7 +86,7 @@ Gilad breaks these two types of activities down as follows:
   \]
   A typical activity in $A_c$ is therefore $(ti,\ell, \omega)$ for some $\ell\in L$ and
   $\omega\in W$, which we write as $ti_{\ell, \omega}$ and take to mean ``tilling the lot
-  $\ell$ starting in the window~$\omega$''.
+  $\ell$ starting in the time window~$\omega$''.
 
 
 \item[Activities specific to a crop] $by$ for buying seeds, $ss$ for soaking seeds, $cs$
@@ -96,7 +100,7 @@ Gilad breaks these two types of activities down as follows:
   \]
   where $C$ is the set of crops. A typical activity in~$A_s$ is therefore $(ha,c,\ell,
   \omega)=ha_{c,\ell, \omega}$, which means ``harvesting the crop $c\in C$ in the lot
-  $\ell\in L$, starting during the window~$\omega$''.
+  $\ell\in L$, starting during the time window~$\omega$''.
 \end{mydesc}
 
 The estimates $|L|=30$, $|R|=5$, $|C|=40$ yield an upper bound of
@@ -105,9 +109,8 @@ The estimates $|L|=30$, $|R|=5$, $|C|=40$ yield an upper bound of
     \ = \
     61\,200
 \]
-activities in the model, which is a very manageable figure for
-commercial solvers, and should also present few problems to free
-solvers such as CBC.
+activities in the model, which is a very manageable figure for commercial solvers, and
+should also not present unsurmountable problems to free solvers such as CBC.
 
 \subsection{Precedence constraints}
 
@@ -127,27 +130,13 @@ together. For example,
     gr_{\ell,[w_1,w_4]},\;
     ha_{c,\ell,[w_4,w_5]}\big)
 \]
-with $w_0<w_1<w_2<w_3<w_4<w_5$
-is a chain consisting of planting, weeding, and harvesting a crop $c$ in a lot~$\ell$ that
-needs $w_4-w_1$~weeks to grow. The directed graph~$H$ records that in this particular
-chain, \emph{growing} and \emph{weeding} may be carried out in parallel, but both these
-activities come after \emph{planting} and before \emph{harvesting}. In general, the set of
-all chains is denoted by~$K$, and if the first activity in a chain~$\chi$ is executed, all
-the others must be executed too. Some conditions that may be expressed using this language
-are the following.
-
-\begin{itemize}
-\item Tomatoes planted in week 25 can be harvested in week 26, but tomatoes planted in
-  week 40 can be harvested only in week 45.
-\item \emph{``A head of lettuce planted in summer must be harvested the week after it is planted,
-  but if it is planted in winter, it can stay in the ground for up to two months.''} This
-can be modeled as
-\[
-  ...
-\]
-\end{itemize}
-
-
+with $w_0<w_1<w_2<w_3<w_4<w_5$ is a chain consisting of \emph{planting}, \emph{weeding}
+(twice), and \emph{harvesting} a crop $c$ in a lot~$\ell$ that needs $w_4-w_1$~weeks to
+\emph{grow}. The directed graph~$H$ records that in this particular chain, \emph{growing}
+and \emph{weeding} may be carried out in parallel, but both these activities come after
+\emph{planting} and before \emph{harvesting}. In general, the set of all chains is denoted
+by~$K$, and if the first activity in a chain~$\chi$ is executed, all the others must be
+executed too. 
 
 \subsection{Overview of the model}
 
@@ -246,7 +235,7 @@ and data:
 
 \end{enumerate}
 
-\subsection{Constraints}
+\subsection{Constraints internal to the model}
 
 We now adapt the individual constraints from~\cite{artigues-etal11}:
 
@@ -335,6 +324,84 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
     S \qquad\text{for all } a\in A
   \end{equation}
 \end{mydesc}
+
+\subsection{External constraints}
+
+We may also incorporate constraints that come from the way crops behave. For example,
+Gilad gives the example that \emph{``A head of lettuce planted in summer must be harvested
+  the week after it is planted, but if it is planted in winter, it can stay in the ground
+  for up to two months.''} This can be modeled via a set of chains 
+\begin{eqnarray*}
+   \chi_{25} 
+   &=& 
+   \big(
+      pl_{\text{lettuce},\, \text{\#42},\, 25}, \; 
+      we_{\text{lettuce},\, \text{\#42},\, [25,26]}, \;
+      gr_{\text{lettuce},\, \text{\#42},\, [25,26]}, \;
+      ha_{\text{lettuce},\, \text{\#42},\, [25,26]}
+      \big), \\
+   \chi_{26} 
+   &=& 
+   \big(
+      pl_{\text{lettuce},\, \text{\#42},\, 26}, \; 
+      we_{\text{lettuce},\, \text{\#42},\, [26,27]}, \;
+      gr_{\text{lettuce},\, \text{\#42},\, [26,27]}, \;
+      ha_{\text{lettuce},\, \text{\#42},\, [26,27]}
+      \big), \\
+   &\dots& \\
+   \chi_{35} 
+   &=& 
+   \big(
+      pl_{\text{lettuce},\, \text{\#42},\, 35}, \; 
+      we_{\text{lettuce},\, \text{\#42},\, [35,36]}, \;
+      gr_{\text{lettuce},\, \text{\#42},\, [35,36]}, \;
+      ha_{\text{lettuce},\, \text{\#42},\, [35,36]}
+      \big)
+\end{eqnarray*}
+that say that lettuces \emph{planted} from the middle of June (week 25) to the last week
+of August (week 35) in a certain lot (\#42 in this example) must be \emph{weeded} exactly
+once, need one week to \emph{grow}, and must be \emph{harvested} one week after planting;
+and a set of chains
+\begin{eqnarray*}
+    \chi_{47} 
+   &=& 
+   \big(
+      pl_{\text{lettuce},\, \text{\#42},\, 47}, \; 
+      we_{\text{lettuce},\, \text{\#42},\, [47,49]}, \;
+      we_{\text{lettuce},\, \text{\#42},\, [50,52]}, \;
+      we_{\text{lettuce},\, \text{\#42},\, [53,55]}, 
+   \\ && \hspace{5.4cm}
+      gr_{\text{lettuce},\, \text{\#42},\, [47,55]}, \;
+      ha_{\text{lettuce},\, \text{\#42},\, [47,55]} \;
+      \big), \\
+    \chi_{48} 
+   &=& 
+   \big(
+      pl_{\text{lettuce},\, \text{\#42},\, 48}, \; 
+      we_{\text{lettuce},\, \text{\#42},\, [48,50]}, \;
+      we_{\text{lettuce},\, \text{\#42},\, [51,53]}, \;
+      we_{\text{lettuce},\, \text{\#42},\, [54,56]}, 
+   \\ && \hspace{5.4cm}
+      gr_{\text{lettuce},\, \text{\#42},\, [48,56]}, \;
+      ha_{\text{lettuce},\, \text{\#42},\, [48,56]} \;
+      \big), \\
+   &\dots& \\
+   \chi_{56} 
+   &=& 
+   \big(
+      pl_{\text{lettuce},\, \text{\#42},\, 56}, \; 
+      we_{\text{lettuce},\, \text{\#42},\, [56,58]}, \;
+      we_{\text{lettuce},\, \text{\#42},\, [59,61]}, \;
+      we_{\text{lettuce},\, \text{\#42},\, [62,64]}, 
+   \\ && \hspace{5.4cm}
+      gr_{\text{lettuce},\, \text{\#42},\, [56,64]}, \;
+      ha_{\text{lettuce},\, \text{\#42},\, [56,64]} \;
+      \big)
+\end{eqnarray*}
+that express that if a head of lettuce is planted between the third week of November (week 47)
+and the last week of January (week 56), up to eight weeks can pass before it must be
+harvested; in exchange for that, we must weed three times. 
+
 
 \subsection{Objective function}
 

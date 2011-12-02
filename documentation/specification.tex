@@ -253,8 +253,12 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed via
   the equality of the corresponding 0/1-variables:
   \begin{equation}
-    a_1 \ = \ a_2 \ = \ \dots \ = \ a_r.
+    a_1 \ = \ a_2 \ = \ \cdots \ = \ a_r.
   \end{equation}
+  This property can be exploited to reduce the number of variables in the problem
+  formulation, leaving in effect only one single binary variable for each chain. As yet,
+  I'm not sure whether to do this simplification in the exposition, or leave it until
+  implementation. 
 
 \item[Setting the starting time] Instead of using $t_0=0$, we set
   \begin{equation}
@@ -265,11 +269,12 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   where $w_0$ indexes the week of the year where optimization starts. In general, using
   weeks as units for time seems to be a good idea.
 
-\item[Ordering the execution starts]
+\item[Linearly ordering the execution start times] Since the events are supposed to be linearly
+  ordered,  their execution times must also be:
   \begin{equation}
-     t_{e+1} 
-     \ \ge \
-     t_e
+     t_e 
+     \ \le \
+     t_{e+1}
      \qquad\text{for all }
       e\in E\smallsetminus\{n\}
   \end{equation}
@@ -330,7 +335,7 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
 \subsection{External constraints}
 
 We may also incorporate constraints that come from the way crops behave. For example,
-Gilad gives the example that \emph{``A head of lettuce planted in summer must be harvested
+Gilad states that \emph{``A head of lettuce planted in summer must be harvested
   the week after it is planted, but if it is planted in winter, it can stay in the ground
   for up to two months.''} This can be modeled via a sequence of chains 
 \begin{eqnarray*}
@@ -372,7 +377,7 @@ and a sequence of chains
       we_{\text{lettuce},\, \text{\#42},\, [47,49]}, \;
       we_{\text{lettuce},\, \text{\#42},\, [50,52]}, \;
       we_{\text{lettuce},\, \text{\#42},\, [53,55]}, 
-   \\ && \hspace{5.4cm}
+   \\ && \hspace{6cm}
       gr_{\text{lettuce},\, \text{\#42},\, [47,55]}, \;
       ha_{\text{lettuce},\, \text{\#42},\, [47,55]} \;
       \big), \\
@@ -383,7 +388,7 @@ and a sequence of chains
       we_{\text{lettuce},\, \text{\#42},\, [48,50]}, \;
       we_{\text{lettuce},\, \text{\#42},\, [51,53]}, \;
       we_{\text{lettuce},\, \text{\#42},\, [54,56]}, 
-   \\ && \hspace{5.4cm}
+   \\ && \hspace{6cm}
       gr_{\text{lettuce},\, \text{\#42},\, [48,56]}, \;
       ha_{\text{lettuce},\, \text{\#42},\, [48,56]} \;
       \big), \\
@@ -395,7 +400,7 @@ and a sequence of chains
       we_{\text{lettuce},\, \text{\#42},\, [56,58]}, \;
       we_{\text{lettuce},\, \text{\#42},\, [59,61]}, \;
       we_{\text{lettuce},\, \text{\#42},\, [62,64]}, 
-   \\ && \hspace{5.4cm}
+   \\ && \hspace{6cm}
       gr_{\text{lettuce},\, \text{\#42},\, [56,64]}, \;
       ha_{\text{lettuce},\, \text{\#42},\, [56,64]} \;
       \big)

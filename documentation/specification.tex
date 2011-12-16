@@ -44,32 +44,68 @@ solvers that have an open source license (in the case of CBC, the
 ``Eclipse Public License'') that permits Gilad to use it commercially
 without paying any license fees.
 
+\section{What will we implement?}
+
+Even a small farm needs to plan many things:
+
+
+\begin{description}
+
+\item[Event scheduling] Determine the right sequence of activities, and the amount
+  of crop to plant.
+
+\item[Spatial distribution] Where will the crops be planted? Some constraints that come
+  into the picture are crop rotation and spatial grouping of similar tasks for optimizing
+  machine usage.
+
+\item[Workforce administration] Given the individual characteristics of the participating
+  workers, distribute the available work in the most efficient way. This will inevitably
+  influence the event scheduling step.
+
+\item[Resource administration] Take into account the non-renewable resources needed for
+  operating the farm: amount of fertilizer, minerals, gasoline, seeds, etc.
+
+\item[Profit maximization] This is one of the driving forces behind the objective function.
+
+\end{description}
+
+In the interest of rapid prototyping and starting the iterations, we start by implementing
+only the event scheduling. Once the infrastructure for this is in place (web interface for
+inputting new data and modifying existing input, scripting tools to generate the input
+files for the solver, web interface for displaying the solution, etc.), we can think about
+the rest.
+
+In particular, in our first approximation for the scheduling problem, we will use
+\emph{weeks} as the basic unit of time. However, in the meantime we might as well start to
+collect data on the estimated duration in \emph{hours} of each task.
+
+
 \section{Event-based modeling}
 
 
 \subsection{Activities to be considered}
 
 In the parlance of \cite{artigues-etal11}, we want to schedule a set
-of \emph{activities} subject to certain constraints. In our setup,
-each activity is associated to a certain specific part of the
-available fields. We refer to these parts or areas as \emph{lots}, and
-collect them into a set~$L$. We allow them to have different
-sizes.
-
-The activities to be carried out in or on these lots come in two types: $A=A_c\cup A_s$,
-where the activities in $A_c$ only affect the field and are thus \emph{``common''} to all
-crops, and the activities~$A_s$ are \emph{``specific''} to each crop. Moreover, we allow
-each activity to occur multiple times in different time windows, to take into account
-repeated sowing, harvesting, etc. We keep track of the repetitions by remembering, for
-each activity, a \emph{valid start time window} $\omega_{\rm start} = [w_1, w_2]$ of weeks
-in which it may begin. This has the added advantage that certain characteristics of the
-activity, such as the duration or the yield, may depend on the start time. For example,
-\emph{``planting tomatoes in week 34 or 35''} and \emph{``planting tomatoes in week 48 or
-  49''} will be separate activities, each with distinct durations and yield. The
-optimization process will determine whether to carry out none, one or both of these
-activities. As an abstract notation, we write~$W$ for the set of all useful start time
-windows $\omega = \omega_{\rm start}$, i.e., all intervals contained in the planning
-horizon of the problem that are eligible for starting a task.
+of \emph{activities} subject to certain constraints. 
+%
+% In our setup, each activity is associated to a certain specific part of the available
+% fields. We refer to these parts or areas as \emph{lots}, and collect them into a
+% set~$L$. We allow them to have different sizes.
+%
+They come in two types: $A=A_c\cup A_s$, where the activities in $A_c$ only affect the
+field and are thus \emph{``common''} to all crops, and the activities~$A_s$ are
+\emph{``specific''} to each crop. Moreover, we allow each activity to occur multiple times
+in different time windows, to take into account repeated sowing, harvesting, etc. We keep
+track of the repetitions by remembering, for each activity, a \emph{valid start time
+  window} $\omega_{\rm start} = [w_1, w_2]$ of weeks in which it may begin. This has the
+added advantage that certain characteristics of the activity, such as the duration or the
+yield, may depend on the start time. For example, \emph{``planting tomatoes in week 34 or
+  35''} and \emph{``planting tomatoes in week 48 or 49''} will be separate activities,
+each with distinct durations and yield. The optimization process will determine whether to
+carry out none, one or both of these activities. As an abstract notation, we write~$W$ for
+the set of all useful start time windows $\omega = \omega_{\rm start}$, i.e., all
+intervals contained in the planning horizon of the problem that are eligible for starting
+a task.
 
 \smallskip
 Gilad breaks the two types of activities down as follows:
@@ -78,15 +114,15 @@ Gilad breaks the two types of activities down as follows:
 \item[Activities common to all crops] $ti$~for tilling, $rv$~for rotovating, $gm$~for
   green manure planting, $f\!t$~for fertilizing, $bb$~for bed building, $si$~for setting
   up irrigation, $sr$ for setting rows, $we$ for weeding. Since each of these activities
-  can occur on each lot, and be repeated, we set
+  can be repeated, we set
   \[
      A_c 
      \ = \
-     \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times L \times W.
+     \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times W.
   \]
-  A typical activity in $A_c$ is therefore $(ti,\ell, \omega)$ for some $\ell\in L$ and
-  $\omega\in W$, which we write as $ti_{\ell, \omega}$ and take to mean ``tilling the lot
-  $\ell$ starting in the time window~$\omega$''.
+  A typical activity in $A_c$ is therefore $(ti,\omega)$ for some $\omega\in W$, which we
+  write as $ti_{\omega}$ and take to mean ``till some unspecified portion of the field,
+  starting in the time window~$\omega$''.
 
 
 \item[Activities specific to a crop] $by$ for buying seeds, $ss$ for soaking seeds, $cs$
@@ -96,21 +132,22 @@ Gilad breaks the two types of activities down as follows:
   trimming, $co$ for covering, $ha$~for harvesting. We assemble these into
   \[
      A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\}
-     \times C \times L \times W,
+     \times C \times W,
   \]
-  where $C$ is the set of crops. A typical activity in~$A_s$ is therefore $(ha,c,\ell,
-  \omega)=ha_{c,\ell, \omega}$, which means ``harvesting the crop $c\in C$ in the lot
-  $\ell\in L$, starting during the time window~$\omega$''.
+  where $C$ is the set of crops. A typical activity in~$A_s$ is therefore $(ha,c,
+  \omega)=ha_{c, \omega}$, which means ``harvesting the crop $c\in C$ starting during the
+  time window~$\omega$''.
 \end{mydesc}
 
-The estimates $|L|=30$, $|R|=5$, $|C|=40$ yield an upper bound of
+The estimates $|R|=5$, $|C|=40$ yield an upper bound of
 \[
-    8 \times 30 \times 5 + 10 \times 40 \times 30 \times 5
+    8  \times 5 + 10 \times 40  \times 5
     \ = \
-    61\,200
+    2\,040
 \]
-activities in the model, which is a very manageable figure for commercial solvers, and
-should also not present unsurmountable problems to free solvers such as CBC.
+activities in the model, which is a very manageable figure for both commercial and free
+solvers.
+
 
 \subsection{Precedence constraints}
 
@@ -124,56 +161,33 @@ together. For example,
 \[
    \chi
    \ = \
-   \big(pl_{c,\ell,[w_0,w_1]}, \;
-    we_{\ell,[w_2,w_3]},\;
-    we_{\ell,[w_3,w_4]},\;
-    gr_{\ell,[w_1,w_4]},\;
-    ha_{c,\ell,[w_4,w_5]}\big)
+   \big(pl_{c,[w_0,w_1]}, \;
+    we_{[w_2,w_3]},\;
+    we_{[w_3,w_4]},\;
+    gr_{[w_1,w_4]},\;
+    ha_{c,[w_4,w_5]}\big)
 \]
 with $w_0<w_1<w_2<w_3<w_4<w_5$ is a chain consisting of \emph{planting}, \emph{weeding}
-(twice), and \emph{harvesting} a crop $c$ in a lot~$\ell$ that needs $w_4-w_1$~weeks to
-\emph{grow}. The directed graph~$H$ records that in this particular chain, \emph{growing}
-and \emph{weeding} may be carried out in parallel, but both these activities come after
+(twice), and \emph{harvesting} a crop $c$ that needs $w_4-w_1$~weeks to \emph{grow}. The
+directed graph~$H$ records that in this particular chain, \emph{growing} and
+\emph{weeding} may be carried out in parallel, but both these activities come after
 \emph{planting} and before \emph{harvesting}. In general, the set of all chains is denoted
 by~$K$, and if the first activity in a chain~$\chi$ is executed, all the others must be
-executed too. 
+executed too.
+
+
 
 \subsection{Overview of the model}
 
-
-We separate the \emph{scheduling} part of the problem, in which the
-appropriate sequencing of events is determined, from the
-\emph{allocation} part, in which activities and crops are assigned
-their proper place in the field. First, the optimal sequencing of
-events is determined in a way that respects the available field space
-and work force using an \emph{event-based} formulation (see below);
-allocation is relegated to a second step. Separating the two phases
-makes it easier to formulate each one, and presumably makes them (and
-thus, the whole problem) easier to solve.
-
-In general terms, we will plan over several years. In the final
-program, there will be an interface to put new activities into a
-\emph{task queue} (a set of events that is not scheduled yet), and an
-interface to record the actual progress of activities. This act of
-recording the real start and end time of activities, environmental
-changes, changes in the available work force, etc., sets certain
-variables in the problem formulation to fixed, known values, and
-allows Gilad to frequently update the solution of the optimization
-problem and dynamically take into account the latest developments.
+We plan over several years. There will be an interface to put new activities into a
+\emph{task queue} (chains of events that are not scheduled yet), and an interface to
+record the actual progress of activities. This act of recording the real start and end
+time of activities, environmental changes, changes in the available work force, etc., sets
+certain variables in the problem formulation to fixed, known values, and allows Gilad to
+frequently update the solution of the optimization problem and dynamically take into
+account the latest developments.
 
 \section{Scheduling}
-
-Before we start with the model, we remark that the setup in \cite{artigues-etal11} allows
-for incorporating constraints on resources. The main \emph{non-renewable} resource that
-comes to mind is ``time'', while some  \emph{renewable} ones are ``space in the
-fields'', ``money'' and ``gasoline''. Money is put back into the system by selling 
-crops, and field space by tilling the remains of the crop. Gasoline is renewable, but
-costs money.
-
-Of these resources, the only one we need to model explicitly at this point is field
-space. The resource ``time'' is handled by the processing times introduced below. I do not
-have sufficient understanding at the moment to know whether use of gasoline can be
-optimized or not. Money will be handled by the objective function.
 
 \subsection{Variables}
 
@@ -206,27 +220,17 @@ and data:
   \[
       \{p_a:a\in A\}
   \]  
-  These must be estimated from experience, and are necessarily averages. Moreover, the
-  processing times will often depend on when each activity is started.
-
-  Another issue is to take into account possible variations in the number of hands
-  available on the farm. One way to do this could be that the processing times stored in
-  the database are the times it would take \emph{one} worker to complete each task. In the
-  user interface, there will be a field to enter an estimate for the number of available
-  helpers in each week of the year. Each time that a new instance of the optimization
-  problem is generated, the processing times for the jobs in each chain in the database
-  are divided by the number of available workers before being written to the optimization
-  file. More sophisticated setups are of course possible, and we'll probably implement one
-  of them before we're done.
+  Since each activity knows about its starting time, we can easily take seasonal
+  variability into account.
 
   \smallskip
-\item The total field space available, $S$, and the space taken up
-  by each activity,
-  \[
-      \{s_a : a\in A\}
-  \]
+% \item The total field space available, $S$, and the space taken up
+%   by each activity,
+%   \[
+%       \{s_a : a\in A\}
+%   \]
 
-\smallskip
+% \smallskip
 \item The yield $y_{c,w}$ of each crop $c\in C$, depending on the week $w\in W$ in which
   it is planted.
 
@@ -240,14 +244,9 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
 
 \item[Not all activities have to execute] We do \emph{not} incorporate a constraint
   $\sum_{e\in E} z_{a,e}=1$ for all $a\in A$, because we do not wish to require all
-  activities to execute. This leaves Gilad margin to queue activities such as ``sowing and
-  harvesting beans for the fifth time'' that may or may not take place, but where the
-  decision on them having take place or not is an outcome of the optimization process and
+  activities to execute. This leaves margin for chains to take place or not, but in a way
+  that the decision whether or not it does is an outcome of the optimization process and
   not an a-priori input to the problem formulation.
-
-  Initially, it therefore seems to be a good idea to queue more repetitions of activities
-  than could reasonably be undertaken, so that the optimal number of repetitions may be
-  learned from the optimization process. We'll see how this works out.
 
 \item[Activities in a chain must go together] The fact that either all or none of the
   activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed via
@@ -323,13 +322,13 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
      \qquad\text{for all } e\in E,\; a\lra b\in H
   \end{equation}
 
-\item[Space constraints] At any given time, all current activities must take up no more
-  than the entire available space:
-  \begin{equation}
-    \sum_{e=1}^n s_a \, z_{a,e} 
-    \ \le \
-    S \qquad\text{for all } a\in A
-  \end{equation}
+% \item[Space constraints] At any given time, all current activities must take up no more
+%   than the entire available space:
+%   \begin{equation}
+%     \sum_{e=1}^n s_a \, z_{a,e} 
+%     \ \le \
+%     S \qquad\text{for all } a\in A
+%   \end{equation}
 \end{mydesc}
 
 \subsection{External constraints}
@@ -339,70 +338,69 @@ Gilad states that \emph{``A head of lettuce planted in summer must be harvested
   the week after it is planted, but if it is planted in winter, it can stay in the ground
   for up to two months.''} This can be modeled via a sequence of chains 
 \begin{eqnarray*}
-   \chi_{\text{lettuce},\, \text{\#42},\, 25} 
+   \chi_{\text{lettuce},\, 25} 
    &=& 
    \big(
-      pl_{\text{lettuce},\, \text{\#42},\, 25}, \; 
-      we_{\text{lettuce},\, \text{\#42},\, [25,26]}, \;
-      gr_{\text{lettuce},\, \text{\#42},\, [25,26]}, \;
-      ha_{\text{lettuce},\, \text{\#42},\, [25,26]}
+      pl_{\text{lettuce},\, 25}, \; 
+      we_{\text{lettuce},\, [25,26]}, \;
+      gr_{\text{lettuce},\, [25,26]}, \;
+      ha_{\text{lettuce},\, [25,26]}
       \big), \\
-   \chi_{\text{lettuce},\, \text{\#42},\, 26} 
+   \chi_{\text{lettuce},\, 26} 
    &=& 
    \big(
-      pl_{\text{lettuce},\, \text{\#42},\, 26}, \; 
-      we_{\text{lettuce},\, \text{\#42},\, [26,27]}, \;
-      gr_{\text{lettuce},\, \text{\#42},\, [26,27]}, \;
-      ha_{\text{lettuce},\, \text{\#42},\, [26,27]}
+      pl_{\text{lettuce},\, 26}, \; 
+      we_{\text{lettuce},\, [26,27]}, \;
+      gr_{\text{lettuce},\, [26,27]}, \;
+      ha_{\text{lettuce},\, [26,27]}
       \big), \\
    &\dots& \\
-   \chi_{\text{lettuce},\, \text{\#42},\, 35} 
+   \chi_{\text{lettuce},\, 35} 
    &=& 
    \big(
-      pl_{\text{lettuce},\, \text{\#42},\, 35}, \; 
-      we_{\text{lettuce},\, \text{\#42},\, [35,36]}, \;
-      gr_{\text{lettuce},\, \text{\#42},\, [35,36]}, \;
-      ha_{\text{lettuce},\, \text{\#42},\, [35,36]}
+      pl_{\text{lettuce},\, 35}, \; 
+      we_{\text{lettuce},\, [35,36]}, \;
+      gr_{\text{lettuce},\, [35,36]}, \;
+      ha_{\text{lettuce},\, [35,36]}
       \big)
 \end{eqnarray*}
 that say that lettuces \emph{planted} from the middle of June (week 25) to the last week
-of August (week 35) in a certain lot (\#42 in this example) must be \emph{weeded} exactly
-once, need one week to \emph{grow}, and must be \emph{harvested} one week after planting;
-and a sequence of chains
+of August (week 35) must be \emph{weeded} exactly once, need one week to \emph{grow}, and
+must be \emph{harvested} one week after planting; and a sequence of chains
 \begin{eqnarray*}
-    \chi_{\text{lettuce},\, \text{\#42},\, 47} 
+    \chi_{\text{lettuce},\, 47} 
    &=& 
    \big(
-      pl_{\text{lettuce},\, \text{\#42},\, 47}, \; 
-      we_{\text{lettuce},\, \text{\#42},\, [47,49]}, \;
-      we_{\text{lettuce},\, \text{\#42},\, [50,52]}, \;
-      we_{\text{lettuce},\, \text{\#42},\, [53,55]}, 
+      pl_{\text{lettuce},\, 47}, \; 
+      we_{\text{lettuce},\, [47,49]}, \;
+      we_{\text{lettuce},\, [50,52]}, \;
+      we_{\text{lettuce},\, [53,55]}, 
    \\ && \hspace{6cm}
-      gr_{\text{lettuce},\, \text{\#42},\, [47,55]}, \;
-      ha_{\text{lettuce},\, \text{\#42},\, [47,55]} \;
+      gr_{\text{lettuce},\, [47,55]}, \;
+      ha_{\text{lettuce},\, [47,55]} \;
       \big), \\
-    \chi_{\text{lettuce},\, \text{\#42},\, 48} 
+    \chi_{\text{lettuce},\, 48} 
    &=& 
    \big(
-      pl_{\text{lettuce},\, \text{\#42},\, 48}, \; 
-      we_{\text{lettuce},\, \text{\#42},\, [48,50]}, \;
-      we_{\text{lettuce},\, \text{\#42},\, [51,53]}, \;
-      we_{\text{lettuce},\, \text{\#42},\, [54,56]}, 
+      pl_{\text{lettuce},\, 48}, \; 
+      we_{\text{lettuce},\, [48,50]}, \;
+      we_{\text{lettuce},\, [51,53]}, \;
+      we_{\text{lettuce},\, [54,56]}, 
    \\ && \hspace{6cm}
-      gr_{\text{lettuce},\, \text{\#42},\, [48,56]}, \;
-      ha_{\text{lettuce},\, \text{\#42},\, [48,56]} \;
+      gr_{\text{lettuce},\, [48,56]}, \;
+      ha_{\text{lettuce},\, [48,56]} \;
       \big), \\
    &\dots& \\
-   \chi_{\text{lettuce},\, \text{\#42},\, 56} 
+   \chi_{\text{lettuce},\, 56} 
    &=& 
    \big(
-      pl_{\text{lettuce},\, \text{\#42},\, 56}, \; 
-      we_{\text{lettuce},\, \text{\#42},\, [56,58]}, \;
-      we_{\text{lettuce},\, \text{\#42},\, [59,61]}, \;
-      we_{\text{lettuce},\, \text{\#42},\, [62,64]}, 
+      pl_{\text{lettuce},\, 56}, \; 
+      we_{\text{lettuce},\, [56,58]}, \;
+      we_{\text{lettuce},\, [59,61]}, \;
+      we_{\text{lettuce},\, [62,64]}, 
    \\ && \hspace{6cm}
-      gr_{\text{lettuce},\, \text{\#42},\, [56,64]}, \;
-      ha_{\text{lettuce},\, \text{\#42},\, [56,64]} \;
+      gr_{\text{lettuce},\, [56,64]}, \;
+      ha_{\text{lettuce},\, [56,64]} \;
       \big)
 \end{eqnarray*}
 that express that if a head of lettuce is planted between the third week of November (week 47)

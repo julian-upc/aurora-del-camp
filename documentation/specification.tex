@@ -131,8 +131,7 @@ Gilad breaks the two types of activities down as follows:
     process.}, $gr$ for growing, $f\!u$ for fumigating, $th$ for thinning, $tr$ for
   trimming, $co$ for covering, $ha$~for harvesting. We assemble these into
   \[
-     A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\}
-     \times C \times W,
+     A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\} \times W,
   \]
   where $C$ is the set of crops. A typical activity in~$A_s$ is therefore $(ha,c,
   \omega)=ha_{c, \omega}$, which means ``harvesting the crop $c\in C$ starting during the
@@ -220,9 +219,16 @@ and data:
   \[
       \{p_a:a\in A\}
   \]  
-  Since each activity knows about its starting time, we can easily take seasonal
-  variability into account.
+  Since each activity knows about its starting time, this takes seasonal variability into
+  account.
 
+\smallskip
+\item A set of continuous variables that indicate the amount of crop planted:
+  \[
+     P
+     \ = \
+     \big\{p_e : e\in E\big\}
+  \]
   \smallskip
 % \item The total field space available, $S$, and the space taken up
 %   by each activity,
@@ -410,15 +416,30 @@ harvested ($56+8=64$); in exchange for that, we must weed three times.
 
 \subsection{Objective function}
 
-The objective function we want to  maximize is thus
-\[
-   f 
-   \ = \
-   \sum_{c\in C, y\in Y} y_{c,w} \sum_{a\in A} x_{c,w,a}
-\]
+We need to think about the objective function we want to  maximize.
+% \[
+%    f 
+%    \ = \
+%    \sum_{c\in C, y\in Y} y_{c,w} \sum_{a\in A} x_{c,w,a}
+% \]
 
 
-\section{Allocation}
+\section{Requirements on the user interface}
+
+We will need interfaces with the following functionalities:
+
+\begin{description}
+\item[Input, managing and updating data] Here we need a way to graphically input, for
+  example, the yield of a certain crop as a function of the time since
+  plantation. Moreover, since for each crop there must be one such function for each week
+  of the year (because the yield varies with the planting time), there should be a way to
+  easily copy such a function from one week to the next so that only slight adjustments
+  need to be made. Also, there should be a functionality to assign the same function to
+  entire swaths of weeks simultaneously. 
+
+\item[Displaying the solution] In this first modelling phase, we only need to represent a
+  timeline with activities for each crop. 
+\end{description}
 
 
 \section{Implementing and optimizing the problem formulation}

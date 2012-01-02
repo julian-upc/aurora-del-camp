@@ -83,7 +83,7 @@ collect data on the estimated duration in \emph{hours} of each task.
 \section{Event-based modeling}
 
 
-\subsection{Activities to be considered}
+\subsection{What is an activity?}
 
 In the parlance of \cite{artigues-etal11}, we want to schedule a set
 of \emph{activities} subject to certain constraints. 
@@ -92,23 +92,35 @@ of \emph{activities} subject to certain constraints.
 % fields. We refer to these parts or areas as \emph{lots}, and collect them into a
 % set~$L$. We allow them to have different sizes.
 %
-They come in two types: $A=A_c\cup A_s$, where the activities in $A_c$ only affect the
-field and are thus \emph{``common''} to all crops, and the activities~$A_s$ are
-\emph{``specific''} to each crop. Moreover, we allow each activity to occur multiple times
-in different time windows, to take into account repeated sowing, harvesting, etc. We keep
-track of the repetitions by remembering, for each activity, a \emph{valid start time
-  window} $\omega_{\rm start} = [w_1, w_2]$ of weeks in which it may begin. This has the
-added advantage that certain characteristics of the activity, such as the duration or the
-yield, may depend on the start time. For example, \emph{``planting tomatoes in week 34 or
-  35''} and \emph{``planting tomatoes in week 48 or 49''} will be separate activities,
-each with distinct durations and yield. The optimization process will determine whether to
-carry out none, one or both of these activities. As an abstract notation, we write~$W$ for
-the set of all useful start time windows $\omega = \omega_{\rm start}$, i.e., all
-intervals contained in the planning horizon of the problem that are eligible for starting
-a task.
+They come in two types: $A=A_c\cup A_s$, where the activities in $A_c$
+only affect the field and are thus \emph{``common''} to all crops, and
+the activities~$A_s$ are \emph{``specific''} to each crop. Moreover,
+we allow each activity to occur multiple times in any given year, to
+take into account repeated sowing, harvesting, etc.  For ease of
+implementation, we consider activities of the same type carried out at
+different times to be distinct; for example, \emph{``planting tomatoes
+  in week 34 or 35''} and \emph{``planting tomatoes in week 48 or
+  49''} will be separate activities, each with distinct durations and
+yield. The optimization process will determine whether to carry out
+none, one or both of these activities.
 
-\smallskip
-Gilad breaks the two types of activities down as follows:
+To implement this, we write $W=\{0,1,\dots,51\}$ for the set of weeks
+in the year, and define an \emph{activity} to be an ordered pair of
+the form
+\[
+  a = (\text{name}, \; w_{\text{earliest}}) \;\in\;
+  N\times W,
+\]
+where $N$ collects the possible names of activities, and
+$w_{\text{earliest}}$ represents the \emph{earliest possible starting
+  week} for~$a$.  To each activity $a$, we associate a \emph{latest
+  possible starting week} $w_{\text{latest}}(a)$ and a \emph{duration}
+$d(a)$ in weeks.
+
+
+\subsection{Activities to be considered for scheduling}
+
+Gilad breaks the common and specific activities down as follows:
 
 \begin{mydesc}
 \item[Activities common to all crops] $ti$~for tilling, $rv$~for rotovating, $gm$~for
@@ -138,21 +150,22 @@ Gilad breaks the two types of activities down as follows:
   time window~$\omega$''.
 \end{mydesc}
 
-The estimates $|R|=5$, $|C|=40$ yield an upper bound of
+The estimate $|C|=40$ yields an upper bound of
 \[
-    8  \times 5 + 10 \times 40  \times 5
+    (8 + 40\times 10) \times 52
     \ = \
-    2\,040
+    21\,216
 \]
-activities in the model, which is a very manageable figure for both commercial and free
-solvers.
+activities in the model, which is a very manageable figure for
+commercial solvers, and should represent no great problems for free
+ones.
 
 
 \subsection{Precedence constraints}
 
 We record the precedence constraints between  activities in a directed acyclic
-graph~$H$. Thus, $t_1\lra t_2$ (also written $t_1<t_2$) is a directed edge
-in~$H$ if $t_1$~must be completed before $t_2$~can start. 
+graph~$H$. Thus, $a_1\lra a_2$ (also written $a_1<a_2$) is a directed edge
+in~$H$ if $a_1$~must be completed before $a_2$~can start. 
 
 \subsection{Chains}
 We further group activities into \emph{chains}, or activities that must go

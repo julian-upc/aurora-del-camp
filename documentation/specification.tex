@@ -265,9 +265,9 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   a-priori input to the problem formulation.
 
 \item[Activities in a chain must go together] The fact that either all or none of the
-  activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed by saying, ``if activity $a_{j+1}$ has not executed at event $e$, then $a_j$ cannot have been executed before that''. These implications, 
+  activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed by saying, ``if activity $a_{j+1}$ has not executed by event $e$, then $a_j$ cannot have been executed before that''. These implications, 
   \[
-     (z_{a_{j+1},e}=0)
+     \Big(\sum_{i=1}^e z_{a_{j+1},i}=0\Big)
       \ \Longrightarrow \
       \Big(\sum_{i=1}^e z_{a_j,i}=0\Big)
      \qquad\text{for } j=1,2,\dots,r-1
@@ -275,9 +275,9 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   \]
   can in turn be formulated as
   \begin{equation}
-    z_{a_{j+1},e} + \sum_{i=1}^e z_{a_j, i} 
+    \sum_{i=1}^e z_{a_{j+1},i} + \sum_{i=1}^e z_{a_j, i} 
     \ \le \
-    e\, z_{a_{j+1}, e}
+    e\, \sum_{i=1}^e z_{a_{j+1}, i}
     \qquad\text{for } j=1,2,\dots, r-1
      \text{ and } e\in E.
   \end{equation}

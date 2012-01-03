@@ -166,8 +166,7 @@ As parameters for the model, we need the following information about each activi
     earliest possible starting time & $w_{\text{earliest}}(a)$ & $W$ \\ 
     latest possible starting time & $w_{\text{latest}}(a)$ & $W$ \\ 
     processing time & $p(a)$ & $\RR$ (fractional weeks)\\ 
-    yield of crop & $y(c,w)$ & $\RR$ (kg); yield of one unit of crop $c\in C$
-    depending on the week $w\in W$ in which it is planted\\\hline
+    yield of crop & $y(c,w_0,w)$ & $\RR$ (kg); yield, in week $w$, of one unit of crop $c\in C$ that was planted in week $w_0$\\\hline
   \end{tabular}
 \end{center}
 
@@ -212,7 +211,7 @@ account the latest developments.
 
 We now proceed to model our problem.  To the activities in $A$ we associate a set~$E$ of
 \emph{events}, which consist of the acts of starting and finishing each activity in~$A$;
-thus, $|E|=2|A|=:n$. In consequence, we may consider $E=\{1,2,\dots, 2|A|=n\}$ to be
+thus, $|E|=2|A|=:n$. In consequence, we may consider $E=\{1,2,\dots, n\}$ to be
 totally ordered.  Following \cite{artigues-etal11}, we introduce the following variables,
 whose optimal values are to be determined by the solver:
 
@@ -231,15 +230,16 @@ whose optimal values are to be determined by the solver:
   \[
      T
      \ = \
-     \big\{t_e : e\in E\big\}
+     \{t_0\}\cup\big\{t_e : e\in E\big\}\cup\{t_{n+1}\}
   \]
+  We also add two dummy variables that are set to impossibly small, respectively large times.
 
 \smallskip
-\item A set of continuous variables that indicate the amount of crop to be planted:
+\item A set of continuous variables that indicate the amount of crop to be planted each week:
   \[
      Q
      \ = \
-     \big\{q_e : e\in E\big\}
+     \big\{q_{c,w} : c\in C, w\in W\big\}
   \]
 % \smallskip
 % \item The total field space available, $S$, and the space taken up
@@ -265,23 +265,30 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   a-priori input to the problem formulation.
 
 \item[Activities in a chain must go together] The fact that either all or none of the
-  activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed via
-  the equality of the corresponding 0/1-variables:
+  activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed by saying, ``if activity $a_{j+1}$ has not executed at event $e$, then $a_j$ cannot have been executed before that''. These implications, 
+  \[
+     (z_{a_{j+1},e}=0)
+      \ \Longrightarrow \
+      \Big(\sum_{i=1}^e z_{a_j,i}=0\Big)
+     \qquad\text{for } j=1,2,\dots,r-1
+     \text{ and } e\in E,
+  \]
+  can in turn be formulated as
   \begin{equation}
-    a_1 \ = \ a_2 \ = \ \cdots \ = \ a_r.
+    z_{a_{j+1},e} + \sum_{i=1}^e z_{a_j, i} 
+    \ \le \
+    e\, z_{a_{j+1}, e}
+    \qquad\text{for } j=1,2,\dots, r-1
+     \text{ and } e\in E.
   \end{equation}
-  This property can be exploited to reduce the number of variables in the problem
-  formulation, leaving in effect only one single binary variable for each chain. As yet,
-  I'm not sure whether to do this simplification in the exposition, or leave it until
-  implementation. 
 
-\item[Setting the starting time] Instead of using $t_0=0$, we set
+\item[Setting the starting time] Instead of using $t_1=0$, we set
   \begin{equation}
-     t_0
+     t_1
      \ = \
-     w_0,
+     w_{\text{start}},
   \end{equation}
-  where $w_0$ indexes the week of the year where optimization starts. 
+  where $w_{\text{start}}$ indexes the week of the year where optimization starts. 
 
 \item[Linearly ordering the execution start times] Since the events are supposed to be linearly
   ordered,  their execution times must also be:
@@ -304,7 +311,7 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
     \\
     t_e 
     & \le &
-    w_{\text{latest}}(a) z_{a,e} + t_n(1-z_{a,e})
+    w_{\text{latest}}(a) z_{a,e} + t_{n+1}(1-z_{a,e})
     \qquad\text{for all } e\in E, a\in A
   \end{eqnarray}
   

@@ -8,6 +8,7 @@
 \usepackage{a4wide}
 \usepackage{bbm}
 
+\newcommand{\RR}{\mathbbm{R}}
 \newcommand{\NN}{\mathbbm{N}}
 \newcommand{\ZZ}{\mathbbm{Z}}
 
@@ -111,12 +112,8 @@ the form
   a = (\text{name}, \; w_{\text{earliest}}) \;\in\;
   N\times W,
 \]
-where $N$ collects the possible names of activities, and
-$w_{\text{earliest}}$ represents the \emph{earliest possible starting
-  week} for~$a$.  To each activity $a$, we associate a \emph{latest
-  possible starting week} $w_{\text{latest}}(a)$ and a \emph{duration}
-$d(a)$ in weeks.
-
+where $N$ collects the possible names of activities, and $w_{\text{earliest}}$ is the
+\emph{earliest possible starting week}.
 
 \subsection{Activities to be considered for scheduling}
 
@@ -132,27 +129,27 @@ Gilad breaks the common and specific activities down as follows:
      \ = \
      \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times W.
   \]
-  A typical activity in $A_c$ is therefore $(ti,\omega)$ for some $\omega\in W$, which we
-  write as $ti_{\omega}$ and take to mean ``till some unspecified portion of the field,
-  starting in the time window~$\omega$''.
+  A typical activity in $A_c$ is therefore $(ti,w)$ for some $w\in W$, which we
+  write as $ti_{w}$ and take to mean ``till some unspecified portion of the field,
+  starting in week $w$ at the earliest''.
 
 
 \item[Activities specific to a crop] $by$ for buying seeds, $ss$ for soaking seeds, $cs$
   for cutting or separating cloned seeds, $gc$~for false germination and cleaning,
   $pl$~for planting\footnote{We consider transplanting and planting to be the same
-    process.}, $gr$ for growing, $f\!u$ for fumigating, $th$ for thinning, $tr$ for
+    process.}, $f\!u$ for fumigating, $th$ for thinning, $tr$ for
   trimming, $co$ for covering, $ha$~for harvesting. We assemble these into
   \[
-     A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\} \times W,
+     A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\} \times C\times W,
   \]
-  where $C$ is the set of crops. A typical activity in~$A_s$ is therefore $(ha,c,
-  \omega)=ha_{c, \omega}$, which means ``harvesting the crop $c\in C$ starting during the
-  time window~$\omega$''.
+  where $C$ is the set of crops. A typical activity in~$A_s$ is
+  therefore $(ha,c, w)=ha_{c, w}$, which means ``harvesting the crop
+  $c\in C$ starting during week $w$ at the earliest''.
 \end{mydesc}
 
 The estimate $|C|=40$ yields an upper bound of
 \[
-    (8 + 40\times 10) \times 52
+    8\times 52 + 10\times 40 \times 52
     \ = \
     21\,216
 \]
@@ -160,6 +157,19 @@ activities in the model, which is a very manageable figure for
 commercial solvers, and should represent no great problems for free
 ones.
 
+\subsection{Auxiliary information for each activity}
+
+As parameters for the model, we need the following information about each activity $a=(\text{name}, w_{\text{earliest}})$:
+\begin{center}
+  \begin{tabular}{lcp{8cm}}
+    & symbol & takes values in\\\hline 
+    earliest possible starting time & $w_{\text{earliest}}(a)$ & $W$ \\ 
+    latest possible starting time & $w_{\text{latest}}(a)$ & $W$ \\ 
+    processing time & $p(a)$ & $\RR$ (fractional weeks)\\ 
+    yield of crop & $y(c,w)$ & $\RR$ (kg); yield of one unit of crop $c\in C$
+    depending on the week $w\in W$ in which it is planted\\\hline
+  \end{tabular}
+\end{center}
 
 \subsection{Precedence constraints}
 
@@ -173,19 +183,16 @@ together. For example,
 \[
    \chi
    \ = \
-   \big(pl_{c,[w_0,w_1]}, \;
-    we_{[w_2,w_3]},\;
-    we_{[w_3,w_4]},\;
-    gr_{[w_1,w_4]},\;
-    ha_{c,[w_4,w_5]}\big)
+   \big(pl_{c,w_1}, \;
+    we_{w_2},\;
+    we_{w_3},\;
+    ha_{c,w_4}\big)
 \]
-with $w_0<w_1<w_2<w_3<w_4<w_5$ is a chain consisting of \emph{planting}, \emph{weeding}
-(twice), and \emph{harvesting} a crop $c$ that needs $w_4-w_1$~weeks to \emph{grow}. The
-directed graph~$H$ records that in this particular chain, \emph{growing} and
-\emph{weeding} may be carried out in parallel, but both these activities come after
-\emph{planting} and before \emph{harvesting}. In general, the set of all chains is denoted
-by~$K$, and if the first activity in a chain~$\chi$ is executed, all the others must be
-executed too.
+with $w_1\le w_2\le w_3\le w_4$ is a chain consisting of \emph{planting}, \emph{weeding}
+(twice), and \emph{harvesting} a crop $c$. The directed graph~$H$ records that in this
+particular chain, both activities of \emph{weeding} come after \emph{planting} and before
+\emph{harvesting}. In general, the set of all chains is denoted by~$K$, and if the first
+activity in a chain~$\chi$ is executed, all the others must be executed too.
 
 
 
@@ -206,8 +213,8 @@ account the latest developments.
 We now proceed to model our problem.  To the activities in $A$ we associate a set~$E$ of
 \emph{events}, which consist of the acts of starting and finishing each activity in~$A$;
 thus, $|E|=2|A|=:n$. In consequence, we may consider $E=\{1,2,\dots, 2|A|=n\}$ to be
-totally ordered.  Following \cite{artigues-etal11}, we introduce the following variables
-and data:
+totally ordered.  Following \cite{artigues-etal11}, we introduce the following variables,
+whose optimal values are to be determined by the solver:
 
 \begin{enumerate}
 \item A set of binary decision variables 
@@ -228,21 +235,13 @@ and data:
   \]
 
 \smallskip
-\item The set of continuous \emph{processing times} for each activity:
+\item A set of continuous variables that indicate the amount of crop to be planted:
   \[
-      \{p_a:a\in A\}
-  \]  
-  Since each activity knows about its starting time, this takes seasonal variability into
-  account.
-
-\smallskip
-\item A set of continuous variables that indicate the amount of crop planted:
-  \[
-     P
+     Q
      \ = \
-     \big\{p_e : e\in E\big\}
+     \big\{q_e : e\in E\big\}
   \]
-  \smallskip
+% \smallskip
 % \item The total field space available, $S$, and the space taken up
 %   by each activity,
 %   \[
@@ -250,8 +249,6 @@ and data:
 %   \]
 
 % \smallskip
-\item The yield $y_{c,w}$ of each crop $c\in C$, depending on the week $w\in W$ in which
-  it is planted.
 
 \end{enumerate}
 
@@ -262,10 +259,10 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
 \begin{mydesc}
 
 \item[Not all activities have to execute] We do \emph{not} incorporate a constraint
-  $\sum_{e\in E} z_{a,e}=1$ for all $a\in A$, because we do not wish to require all
-  activities to execute. This leaves margin for chains to take place or not, but in a way
-  that the decision whether or not it does is an outcome of the optimization process and
-  not an a-priori input to the problem formulation.
+  $\sum_{e\in E} z_{a,e}=1$ for all $a\in A$, because we do not require all activities to
+  execute. This leaves margin for chains to take place or not, but in a way that the
+  decision whether or not it does is an outcome of the optimization process and not an
+  a-priori input to the problem formulation.
 
 \item[Activities in a chain must go together] The fact that either all or none of the
   activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed via
@@ -284,8 +281,7 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
      \ = \
      w_0,
   \end{equation}
-  where $w_0$ indexes the week of the year where optimization starts. In general, using
-  weeks as units for time seems to be a good idea.
+  where $w_0$ indexes the week of the year where optimization starts. 
 
 \item[Linearly ordering the execution start times] Since the events are supposed to be linearly
   ordered,  their execution times must also be:
@@ -296,12 +292,21 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
      \qquad\text{for all }
       e\in E\smallsetminus\{n\}
   \end{equation}
+  Here ``$e+1$'' stands for the event after $e$, according to the total ordering
+  $E\cong\{1,2,\dots,n\}$.
 
 \item[Execution start constraints] Relations that implement start time windows:
-  \begin{equation}
-    w_{1,e}\ \le\ t_e \ \le \ w_{2,e}
-    \qquad\text{for all } e\in E
-  \end{equation}
+  \begin{eqnarray}
+    t_e 
+    & \ge &
+    w_{\text{earliest}}(a) z_{a,e} + t_0 (1-z_{a,e})
+    \qquad\text{for all } e\in E, a\in A
+    \\
+    t_e 
+    & \le &
+    w_{\text{latest}}(a) z_{a,e} + t_n(1-z_{a,e})
+    \qquad\text{for all } e\in E, a\in A
+  \end{eqnarray}
   
 
 \item[Duration constraints]
@@ -361,70 +366,42 @@ Gilad states that \emph{``A head of lettuce planted in summer must be harvested
    &=& 
    \big(
       pl_{\text{lettuce},\, 25}, \; 
-      we_{\text{lettuce},\, [25,26]}, \;
-      gr_{\text{lettuce},\, [25,26]}, \;
-      ha_{\text{lettuce},\, [25,26]}
+      we_{\text{lettuce},\, 25}, \;
+      ha_{\text{lettuce},\, 25}
       \big), \\
    \chi_{\text{lettuce},\, 26} 
    &=& 
    \big(
       pl_{\text{lettuce},\, 26}, \; 
-      we_{\text{lettuce},\, [26,27]}, \;
-      gr_{\text{lettuce},\, [26,27]}, \;
-      ha_{\text{lettuce},\, [26,27]}
+      we_{\text{lettuce},\, 26}, \;
+      ha_{\text{lettuce},\, 26}
       \big), \\
    &\dots& \\
    \chi_{\text{lettuce},\, 35} 
    &=& 
    \big(
       pl_{\text{lettuce},\, 35}, \; 
-      we_{\text{lettuce},\, [35,36]}, \;
-      gr_{\text{lettuce},\, [35,36]}, \;
-      ha_{\text{lettuce},\, [35,36]}
+      we_{\text{lettuce},\, 35}, \;
+      ha_{\text{lettuce},\, 35}
       \big)
 \end{eqnarray*}
 that say that lettuces \emph{planted} from the middle of June (week 25) to the last week
-of August (week 35) must be \emph{weeded} exactly once, need one week to \emph{grow}, and
-must be \emph{harvested} one week after planting; and a sequence of chains
-\begin{eqnarray*}
-    \chi_{\text{lettuce},\, 47} 
-   &=& 
+of August (week 35) must be \emph{weeded} exactly once and \emph{harvested} one week after
+planting; and a sequence of chains
+\[
+    \chi_{\text{lettuce},\, i} 
+   \ = \ 
    \big(
-      pl_{\text{lettuce},\, 47}, \; 
-      we_{\text{lettuce},\, [47,49]}, \;
-      we_{\text{lettuce},\, [50,52]}, \;
-      we_{\text{lettuce},\, [53,55]}, 
-   \\ && \hspace{6cm}
-      gr_{\text{lettuce},\, [47,55]}, \;
-      ha_{\text{lettuce},\, [47,55]} \;
-      \big), \\
-    \chi_{\text{lettuce},\, 48} 
-   &=& 
-   \big(
-      pl_{\text{lettuce},\, 48}, \; 
-      we_{\text{lettuce},\, [48,50]}, \;
-      we_{\text{lettuce},\, [51,53]}, \;
-      we_{\text{lettuce},\, [54,56]}, 
-   \\ && \hspace{6cm}
-      gr_{\text{lettuce},\, [48,56]}, \;
-      ha_{\text{lettuce},\, [48,56]} \;
-      \big), \\
-   &\dots& \\
-   \chi_{\text{lettuce},\, 56} 
-   &=& 
-   \big(
-      pl_{\text{lettuce},\, 56}, \; 
-      we_{\text{lettuce},\, [56,58]}, \;
-      we_{\text{lettuce},\, [59,61]}, \;
-      we_{\text{lettuce},\, [62,64]}, 
-   \\ && \hspace{6cm}
-      gr_{\text{lettuce},\, [56,64]}, \;
-      ha_{\text{lettuce},\, [56,64]} \;
-      \big)
-\end{eqnarray*}
-that express that if a head of lettuce is planted between the third week of November (week 47)
-and the last week of January (week 56), up to eight weeks can pass before it must be
-harvested ($56+8=64$); in exchange for that, we must weed three times. 
+      pl_{\text{lettuce},\, i}, \; 
+      we_{i+4}, \;
+      ha_{\text{lettuce},\, i} \;
+      \big),
+      \qquad i=47,48,\dots, 56,
+\]
+where $w_{\text{latest}}(pl_{\text{lettuce},i})=i$, $w_{\text{latest}}(we_k)=k$,
+$w_{\text{latest}}(ha_{\text{lettuce},i})=i+8$, that express that if lettuce is planted
+between the third week of November (week 47) and the last week of January (week 56), up to
+eight weeks can pass before it must be harvested.
 
 
 \subsection{Objective function}

@@ -93,27 +93,34 @@ of \emph{activities} subject to certain constraints.
 % fields. We refer to these parts or areas as \emph{lots}, and collect them into a
 % set~$L$. We allow them to have different sizes.
 %
-They come in two types: $A=A_c\cup A_s$, where the activities in $A_c$
-only affect the field and are thus \emph{``common''} to all crops, and
-the activities~$A_s$ are \emph{``specific''} to each crop. Moreover,
-we allow each activity to occur multiple times in any given year, to
-take into account repeated sowing, harvesting, etc.  For ease of
-implementation, we consider activities of the same type carried out at
-different times to be distinct; for example, \emph{``planting tomatoes
-  in week 34 or 35''} and \emph{``planting tomatoes in week 48 or
-  49''} will be separate activities, each with distinct durations and
-yield. The optimization process will determine whether to carry out
-none, one or both of these activities.
-
-To implement this, we write $W=\{0,1,\dots,51\}$ for the set of weeks
-in the year, and define an \emph{activity} to be an ordered pair of
-the form
+They come in two types: $A=A_c\cup A_s$, where the activities in $A_c$ only affect the
+field and are thus \emph{``common''} to all crops, and the activities~$A_s$ are
+\emph{``specific''} to each crop. Moreover, we allow each activity to occur multiple times
+in any given year, to take into account repeated sowing, harvesting, etc. To each ``copy''
+of an activity, we associate its earliest and latest starting time and duration. Each such
+copy may or may not end up being up being actually carried out, depending on the global
+result of the optimization.  More precisely, we define an \emph{activity} to be an ordered
+pair of the form
 \[
-  a = (\text{name}, \; w_{\text{earliest}}) \;\in\;
-  N\times W,
+  a = (\text{name}, \; j) \;\in\;
+  N\times R,
 \]
-where $N$ collects the possible names of activities, and $w_{\text{earliest}}$ is the
-\emph{earliest possible starting week}.
+where $N$ collects the possible names of activities, and $R$ indexes the
+repetitions. Moreover, we collect the following information about each activity $a$:
+\begin{center}
+  \begin{tabular}{lcp{8cm}}
+    & symbol & takes values in\\\hline 
+    earliest possible starting time & $w_{\text{earliest}}(a)$ & $W$ \\ 
+    latest possible starting time & $w_{\text{latest}}(a)$ & $W$ \\ 
+    processing time & $p(a)$ & $\RR$ (fractional weeks)\\ 
+    projected yield of crop & $y(c,w_0,w)$ & $\RR$ (kg); yield, in week $w$, of one unit of crop $c\in C$ that was planted in week $w_0$\\
+    desired yield of crop & $Y_{c,w}$ & desired yield of crop $c$ in week $w$\\\hline
+  \end{tabular}
+\end{center}
+
+For some activities, such as ``planting'', we need to be quite precise about the starting time
+window and set $w_{\text{earliest}}(a) = w_{\text{latest}}(a)$, while for other activities
+such as ``tilling'' we may allow different values for these times.
 
 \subsection{Activities to be considered for scheduling}
 
@@ -127,11 +134,11 @@ Gilad breaks the common and specific activities down as follows:
   \[
      A_c 
      \ = \
-     \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times W.
+     \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times R.
   \]
-  A typical activity in $A_c$ is therefore $(ti,w)$ for some $w\in W$, which we
-  write as $ti_{w}$ and take to mean ``till some unspecified portion of the field,
-  starting in week $w$ at the earliest''.
+  A typical activity in $A_c$ is therefore $(ti,j)$ for some $j\in R$, which we write as
+  $ti_{j}$ and take to mean ``till some unspecified portion of the field, for the $j$-th
+  time since the start of the optimization''.
 
 
 \item[Activities specific to a crop] $by$ for buying seeds, $ss$ for soaking seeds, $cs$
@@ -140,36 +147,26 @@ Gilad breaks the common and specific activities down as follows:
     process.}, $f\!u$ for fumigating, $th$ for thinning, $tr$ for
   trimming, $co$ for covering, $ha$~for harvesting. We assemble these into
   \[
-     A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\} \times C\times W,
+     A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\} \times C\times R,
   \]
   where $C$ is the set of crops. A typical activity in~$A_s$ is
-  therefore $(ha,c, w)=ha_{c, w}$, which means ``harvesting the crop
-  $c\in C$ starting during week $w$ at the earliest''.
+  therefore $(ha,c, j)=ha_{c, j}$, which means ``harvesting the crop
+  $c\in C$ for the $j$-th time''.
 \end{mydesc}
 
-The estimate $|C|=40$ yields an upper bound of
+Choosing $|R|=50$ and $|C|=40$ yields an estimate of
 \[
-    8\times 52 + 10\times 40 \times 52
+    8\times 50 + 10\times 40 \times 50
     \ = \
-    21\,216
+    2\,400
 \]
-activities in the model, which is a very manageable figure for
-commercial solvers, and should represent no great problems for free
-ones.
+activities in the model, which is a very manageable figure for both commercial and free
+solvers. We will see in a moment that the actual number of variables will increase
+somewhat due to the particularities of modelling the problem as an integer problem, but
+this approach is much better than introducing binary variables of the form
+``$x_{\text{activity}, \text{week}}$'' for each week of the year.
 
-\subsection{Auxiliary information for the model}
 
-As parameters for the model, we need the following information. Here $a$ denotes an activity $a=(\text{name}, w_{\text{earliest}})$:
-\begin{center}
-  \begin{tabular}{lcp{8cm}}
-    & symbol & takes values in\\\hline 
-    earliest possible starting time & $w_{\text{earliest}}(a)$ & $W$ \\ 
-    latest possible starting time & $w_{\text{latest}}(a)$ & $W$ \\ 
-    processing time & $p(a)$ & $\RR$ (fractional weeks)\\ 
-    projected yield of crop & $y(c,w_0,w)$ & $\RR$ (kg); yield, in week $w$, of one unit of crop $c\in C$ that was planted in week $w_0$\\
-    desired yield of crop & $Y_{c,w}$ & desired yield of crop $c$ in week $w$\\\hline
-  \end{tabular}
-\end{center}
 
 \subsection{Precedence constraints}
 
@@ -183,17 +180,16 @@ together. For example,
 \[
    \chi
    \ = \
-   \big(pl_{c,w_1}, \;
-    we_{w_2},\;
-    we_{w_3},\;
-    ha_{c,w_4},\;
-    ha_{c,w_5}\big)
+   \big(pl_{c,1}, \;
+    we_{1},\;
+    we_{2},\;
+    ha_{c,1},\;
+    ha_{c,2}\big)
 \]
-with $w_1\le w_2\le w_3\le w_4\le w_5$ is a chain consisting of \emph{planting},
-\emph{weeding} (twice), and \emph{harvesting} (twice) a crop $c$. The directed graph~$H$
-records that in this particular chain, both activities of \emph{weeding} come after
-\emph{planting} and before each \emph{harvesting}; moreover, the second harvesting must
-occur after the first one. 
+is a chain consisting of \emph{planting}, \emph{weeding} (twice), and \emph{harvesting}
+(twice) a crop $c$. The directed graph~$H$ records that in this particular chain, both
+activities of \emph{weeding} come after \emph{planting} and before each \emph{harvesting};
+moreover, the second harvesting must occur after the first one.
 
 The set of all chains is denoted by~$K$, and if the first activity in a chain~$\chi$ is
 executed, all the others must be executed too.
@@ -244,7 +240,7 @@ whose optimal values are to be determined by the solver:
   \[
      Q
      \ = \
-     \big\{q_{pl(c,w)} : c\in C, w\in W\big\}
+     \big\{q_{pl(c,j)} : c\in C, j\in R\big\}
   \]
 % \smallskip
 % \item The total field space available, $S$, and the space taken up
@@ -258,17 +254,45 @@ whose optimal values are to be determined by the solver:
   \[
      H
      \ = \
-     \big\{h_{ha(c,w),e} : c\in C, w\in W, e\in E\big\}
+     \big\{h_{ha(c,j),e} : c\in C, j\in R, e\in E\big\}
   \]
 
 \end{enumerate}
 
 \subsection{Tricks needed later}
 
+We collect some tricks for our integer programming formulation.
+
 \begin{description}
-\item[Replacement of a product of variables by a linear variable] If $x_1$ is a binary
-  variable~$x_1$ and $x_2$ a general variable for which we know an upper bound , we can replace their product by a linear
-  variable that models $y=x_1x_2$  
+\item[Replacement of a product of variables by a linear variable] If $x_1\in\{0,1\}$ is a
+  binary variable and $0\le x_2\le u$ a nonnegative continuous variable for which we know
+  an upper bound~$u$, then a case analysis~\cite[Chapter~7]{aimms} shows that we can
+  replace their product by a linear variable~$y$ that models the quadratic form~$x_1x_2$
+  by adding the constraints
+  \begin{eqnarray*}
+    y &\le& u\, x_1 \\
+    y &\le& x_2 \\
+    y &\ge& x_2 - u(1-x_1) \\
+    y &\ge& 0.
+  \end{eqnarray*}
+
+\item[Indicator variables] We will also need binary variables of the form $v_{w_1,w_2}$
+  that indicate whether or not a continuous variable~$t$ lies in the interval~$[w_1,w_2]$
+  or not. This trick goes back to Dantzig in 1960~\cite{dantzig60}, and works by writing
+  $t$ as a convex combination of $w_0<w_1<w_2<w_N$ using the following inequalities:
+  \begin{eqnarray*}
+    t &=& \sum_i \lambda_i\; w_i\\
+    \sum_i \lambda_i &=& 1\\
+    \lambda_i &\ge& 0, \qquad\qquad i=0,1,2,N\\
+    \lambda_0 &\le& v_{w_0,w_1}\\
+    \lambda_1 &\le& v_{w_0,w_1} + v_{w_1,w_2}\\
+    \lambda_2 &\le& \phantom{v_{w_0,w_1} +{}}v_{w_1,w_2} + v_{w_2,w_N}\\
+    \lambda_N &\le& \phantom{v_{w_0,w_1} + v_{w_1,w_2}+{}}v_{w_2,w_N}\\
+    v_{w_0,w_1} + v_{w_1,w_2} + v_{w_2,w_N} &=& 1\\
+    v_{w_0,w_1},\; v_{w_1,w_2},\; v_{w_2,w_N} &\in& \{0,1\}
+  \end{eqnarray*}
+  We can immediately check that exactly one of the $v$'s is equal to $1$, and that it is
+  $v_{w_1,w_2}$ precisely if $w_1\le t\le w_2$.
 \end{description}
 
 \subsection{Constraints internal to the model}

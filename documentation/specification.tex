@@ -157,16 +157,17 @@ activities in the model, which is a very manageable figure for
 commercial solvers, and should represent no great problems for free
 ones.
 
-\subsection{Auxiliary information for each activity}
+\subsection{Auxiliary information for the model}
 
-As parameters for the model, we need the following information about each activity $a=(\text{name}, w_{\text{earliest}})$:
+As parameters for the model, we need the following information. Here $a$ denotes an activity $a=(\text{name}, w_{\text{earliest}})$:
 \begin{center}
   \begin{tabular}{lcp{8cm}}
     & symbol & takes values in\\\hline 
     earliest possible starting time & $w_{\text{earliest}}(a)$ & $W$ \\ 
     latest possible starting time & $w_{\text{latest}}(a)$ & $W$ \\ 
     processing time & $p(a)$ & $\RR$ (fractional weeks)\\ 
-    yield of crop & $y(c,w_0,w)$ & $\RR$ (kg); yield, in week $w$, of one unit of crop $c\in C$ that was planted in week $w_0$\\\hline
+    projected yield of crop & $y(c,w_0,w)$ & $\RR$ (kg); yield, in week $w$, of one unit of crop $c\in C$ that was planted in week $w_0$\\
+    desired yield of crop & $Y_{c,w}$ & desired yield of crop $c$ in week $w$\\\hline
   \end{tabular}
 \end{center}
 
@@ -185,13 +186,17 @@ together. For example,
    \big(pl_{c,w_1}, \;
     we_{w_2},\;
     we_{w_3},\;
-    ha_{c,w_4}\big)
+    ha_{c,w_4},\;
+    ha_{c,w_5}\big)
 \]
-with $w_1\le w_2\le w_3\le w_4$ is a chain consisting of \emph{planting}, \emph{weeding}
-(twice), and \emph{harvesting} a crop $c$. The directed graph~$H$ records that in this
-particular chain, both activities of \emph{weeding} come after \emph{planting} and before
-\emph{harvesting}. In general, the set of all chains is denoted by~$K$, and if the first
-activity in a chain~$\chi$ is executed, all the others must be executed too.
+with $w_1\le w_2\le w_3\le w_4\le w_5$ is a chain consisting of \emph{planting},
+\emph{weeding} (twice), and \emph{harvesting} (twice) a crop $c$. The directed graph~$H$
+records that in this particular chain, both activities of \emph{weeding} come after
+\emph{planting} and before each \emph{harvesting}; moreover, the second harvesting must
+occur after the first one. 
+
+The set of all chains is denoted by~$K$, and if the first activity in a chain~$\chi$ is
+executed, all the others must be executed too.
 
 
 
@@ -230,16 +235,16 @@ whose optimal values are to be determined by the solver:
   \[
      T
      \ = \
-     \{t_0\}\cup\big\{t_e : e\in E\big\}\cup\{t_{n+1}\}
+     \big\{t_e : e\in E\big\}
   \]
-  We also add two dummy variables that are set to impossibly small, respectively large times.
 
 \smallskip
-\item A set of continuous variables that indicate the amount of crop to be planted each week:
+\item A set of continuous variables that indicate the amount of crop to be planted in each
+  planting activity:
   \[
      Q
      \ = \
-     \big\{q_{c,w} : c\in C, w\in W\big\}
+     \big\{q_{pl(c,w)} : c\in C, w\in W\big\}
   \]
 % \smallskip
 % \item The total field space available, $S$, and the space taken up
@@ -248,9 +253,23 @@ whose optimal values are to be determined by the solver:
 %       \{s_a : a\in A\}
 %   \]
 
-% \smallskip
+\smallskip
+\item A set of continuous variables that calculate the amount of crop harvested at each event:
+  \[
+     H
+     \ = \
+     \big\{h_{ha(c,w),e} : c\in C, w\in W, e\in E\big\}
+  \]
 
 \end{enumerate}
+
+\subsection{Tricks needed later}
+
+\begin{description}
+\item[Replacement of a product of variables by a linear variable] If $x_1$ is a binary
+  variable~$x_1$ and $x_2$ a general variable for which we know an upper bound , we can replace their product by a linear
+  variable that models $y=x_1x_2$  
+\end{description}
 
 \subsection{Constraints internal to the model}
 
@@ -265,7 +284,9 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   a-priori input to the problem formulation.
 
 \item[Activities in a chain must go together] The fact that either all or none of the
-  activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed by saying, ``if activity $a_{j+1}$ has not executed by event $e$, then $a_j$ cannot have been executed before that''. These implications, 
+  activites in a given chain $\chi=(a_1,a_2,\dots,a_r)$ must be executed is expressed by
+  saying, ``if activity $a_{j+1}$ has not executed by event $e$, then $a_j$ cannot have
+  been executed before that''. These implications,
   \[
      \Big(\sum_{i=1}^e z_{a_{j+1},i}=0\Big)
       \ \Longrightarrow \
@@ -274,7 +295,7 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
      \text{ and } e\in E,
   \]
   can in turn be formulated as
-  \begin{equation}
+  \begin{equation}\label{ineq:chain}
     \sum_{i=1}^e z_{a_{j+1},i} + \sum_{i=1}^e z_{a_j, i} 
     \ \le \
     e\, \sum_{i=1}^e z_{a_{j+1}, i}
@@ -306,12 +327,12 @@ We now adapt the individual constraints from~\cite{artigues-etal11}:
   \begin{eqnarray}
     t_e 
     & \ge &
-    w_{\text{earliest}}(a) z_{a,e} + t_0 (1-z_{a,e})
+    w_{\text{earliest}}(a) z_{a,e} + t_1 (1-z_{a,e})
     \qquad\text{for all } e\in E, a\in A
     \\
     t_e 
     & \le &
-    w_{\text{latest}}(a) z_{a,e} + t_{n+1}(1-z_{a,e})
+    w_{\text{latest}}(a) z_{a,e} + t_n(1-z_{a,e})
     \qquad\text{for all } e\in E, a\in A
   \end{eqnarray}
   
@@ -350,7 +371,7 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
      z_{a,e} + \sum_{i=1}^e z_{b,i}
      \ \le \
      1+(1-z_{a,e})e
-     \qquad\text{for all } e\in E,\; a\lra b\in H
+     \qquad\text{for all } e\in E,\; a\lra b\in H.
   \end{equation}
 
 % \item[Space constraints] At any given time, all current activities must take up no more
@@ -360,14 +381,26 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
 %     \ \le \
 %     S \qquad\text{for all } a\in A
 %   \end{equation}
+
+\item[Harvesting constraints] To control the amount of crop harvested in week $w$ from
+  crop planted in week~$w_0$, we include the following inequalities:
+  \begin{eqnarray}
+    h_{ha(c,w),e} &\ge& 0 \\
+    h_{ha(c,w),e} &\ge& y(c,w_0,w)\, q_{c,w_0}\, (z_{a,e-1}-z_{a,e})\\
+    h_{ha(c,w),e} &\le& y(c,w_0,w)\, q_{c,w_0}\, z_{a,e-1}\\    
+    h_{ha(c,w),e} &\le& y(c,w_0,w)\, q_{c,w_0}\, (1-z_{a,e})
+  \end{eqnarray}
+  Notice that $y(c,w_0,w)q_{c,w_0}$ is the actual quantity of crop $c$ harvested. To
+  remove the quadratic 
 \end{mydesc}
 
 \subsection{External constraints}
 
-We may also incorporate constraints that come from the way crops behave. For example,
-Gilad states that \emph{``A head of lettuce planted in summer must be harvested
-  the week after it is planted, but if it is planted in winter, it can stay in the ground
-  for up to two months.''} This can be modeled via a sequence of chains 
+\begin{description}
+\item[Crop behavior] For example, Gilad states that \emph{``A head of lettuce planted in
+  summer must be harvested the week after it is planted, but if it is planted in winter,
+  it can stay in the ground for up to two months.''} This can be modeled via the
+  inequalities~\eqref{ineq:chain} corresponding to the sequence of chains
 \begin{eqnarray*}
    \chi_{\text{lettuce},\, 25} 
    &=& 
@@ -410,6 +443,14 @@ $w_{\text{latest}}(ha_{\text{lettuce},i})=i+8$, that express that if lettuce is 
 between the third week of November (week 47) and the last week of January (week 56), up to
 eight weeks can pass before it must be harvested.
 
+\item[Production goals] The constraints corresponding to the desired production of each
+  crop are of paramount importance to the model. To express that the total yield for a
+  crop~$c\in C$ in a certain week $w^\star\in W$ be a certain quantity~$Y_{c,w^\star}$, we
+  group all chains corresponding to the crop~$c$ into a set $K_c$, and impose the
+  constraints
+  \[
+     \sum_{\chi\in K_c} 
+  \]
 
 \subsection{Objective function}
 
@@ -443,7 +484,7 @@ We will need interfaces with the following functionalities:
 
 \subsection{Implementation}
 
-We will probably use either PHP or Python to generate the input file to the optimizer from
+We will use the Python PuLP framework to generate the input file to the optimizer from
 a database of constraints and other data.
 
 \subsection{Optimizations}

@@ -102,19 +102,22 @@ copy may or may not end up being up being actually carried out, depending on the
 result of the optimization.  More precisely, we define an \emph{activity} to be an ordered
 pair of the form
 \[
-  a = (\text{name}, \; j) \;\in\;
+  a = (\text{name}, \; r) \;\in\;
   N\times R,
 \]
 where $N$ collects the possible names of activities, and $R$ indexes the
-repetitions. Moreover, we collect the following information about each activity $a$:
+repetitions. Moreover, we collect the following information about each activity $a$, and
+the farm in general:
 \begin{center}
   \begin{tabular}{lcp{8cm}}
     & symbol & takes values in\\\hline 
-    earliest possible starting time & $w_{\text{earliest}}(a)$ & $W$ \\ 
+    earliest possible starting time & $w_{\text{earliest}}(a)$ & $W=\{0,1,\dots,3\times 52-1\}$, the
+    set of  weeks inside the planning horizon of the model (here, three years)\\ 
     latest possible starting time & $w_{\text{latest}}(a)$ & $W$ \\ 
     processing time & $p(a)$ & $\RR$ (fractional weeks)\\ 
     projected yield of crop & $y(c,w_0,w)$ & $\RR$ (kg); yield, in week $w$, of one unit of crop $c\in C$ that was planted in week $w_0$\\
-    desired yield of crop & $Y_{c,w}$ & desired yield of crop $c$ in week $w$\\\hline
+    desired yield of crop & $Y_{c,w}$ & $\RR$ (kg); desired yield of crop $c$ in week $w$\\
+    maximal number of ``unit plants''  & $y_{\text{upper}}(c)$ & $\RR$ (number) determined by field size\\ \hline
   \end{tabular}
 \end{center}
 
@@ -136,8 +139,8 @@ Gilad breaks the common and specific activities down as follows:
      \ = \
      \{ ti,\;rv,\;gm,\;f\!t,\;bb,\;si,\;sr,\;we\} \times R.
   \]
-  A typical activity in $A_c$ is therefore $(ti,j)$ for some $j\in R$, which we write as
-  $ti_{j}$ and take to mean ``till some unspecified portion of the field, for the $j$-th
+  A typical activity in $A_c$ is therefore $(ti,r)$ for some $r\in R$, which we write as
+  $ti_{r}$ and take to mean ``till some unspecified portion of the field, for the $r$-th
   time since the start of the optimization''.
 
 
@@ -150,20 +153,20 @@ Gilad breaks the common and specific activities down as follows:
      A_s = \{ by,\;ss,\;cs,\;gc,\;pl,\;f\!u,\;th,\;tr,\;co,\;ha\} \times C\times R,
   \]
   where $C$ is the set of crops. A typical activity in~$A_s$ is
-  therefore $(ha,c, j)=ha_{c, j}$, which means ``harvesting the crop
-  $c\in C$ for the $j$-th time''.
+  therefore $(ha,c, r)=ha_{c,r}$, which means ``harvesting the crop
+  $c\in C$ for the $r$-th time''.
 \end{mydesc}
 
-Choosing $|R|=50$ and $|C|=40$ yields an estimate of
+Choosing $|R|=50$ and $|C|=40$ yields a generous estimate of
 \[
     8\times 50 + 10\times 40 \times 50
     \ = \
     2\,400
 \]
 activities in the model, which is a very manageable figure for both commercial and free
-solvers. We will see in a moment that the actual number of variables will increase
-somewhat due to the particularities of modelling the problem as an integer problem, but
-this approach is much better than introducing binary variables of the form
+solvers. We will see in a moment that the actual number of variables increases somewhat
+due to the particularities of modelling the problem as an integer problem, but this
+approach is much better than introducing binary variables of the form
 ``$x_{\text{activity}, \text{week}}$'' for each week of the year.
 
 
@@ -240,7 +243,7 @@ whose optimal values are to be determined by the solver:
   \[
      Q
      \ = \
-     \big\{q_{pl(c,j)} : c\in C, j\in R\big\}
+     \big\{q_{pl(c,r)} : c\in C, r\in R\big\}
   \]
 % \smallskip
 % \item The total field space available, $S$, and the space taken up
@@ -254,12 +257,12 @@ whose optimal values are to be determined by the solver:
   \[
      H
      \ = \
-     \big\{h_{ha(c,j),e} : c\in C, j\in R, e\in E\big\}
+     \big\{h_{ha(c,r),e} : c\in C, r\in R, e\in E\big\}
   \]
 
 \end{enumerate}
 
-\subsection{Tricks needed later}
+\subsection{Tricks needed later}\label{sec:tricks}
 
 We collect some tricks for our integer programming formulation.
 
@@ -277,9 +280,11 @@ We collect some tricks for our integer programming formulation.
   \end{eqnarray*}
 
 \item[Indicator variables] We will also need binary variables of the form $v_{w_1,w_2}$
-  that indicate whether or not a continuous variable~$t$ lies in the interval~$[w_1,w_2]$
-  or not. This trick goes back to Dantzig in 1960~\cite{dantzig60}, and works by writing
-  $t$ as a convex combination of $w_0<w_1<w_2<w_N$ using the following inequalities:
+  that indicate whether or not a continuous variable~$t$ lies in the
+  interval~$[w_1,w_2]$. This trick goes back to Dantzig in 1960~\cite{dantzig60}, and
+  works by writing $t$ as a convex combination of $w_0<w_1<w_2<w_N$ (where $w_0$~and~$w_N$
+  stand for the beginning and end of the planning horizon, respectively) using the
+  following inequalities:
   \begin{eqnarray*}
     t &=& \sum_i \lambda_i\; w_i\\
     \sum_i \lambda_i &=& 1\\
@@ -406,21 +411,58 @@ and $e$ is at least the processing time of $a$: $t_f \ge t_e + p_a$.
 %     S \qquad\text{for all } a\in A
 %   \end{equation}
 
-\item[Harvesting constraints] To control the amount of crop harvested in week $w$ from
-  crop planted in week~$w_0$, we include the following inequalities:
-  \begin{eqnarray}
-    h_{ha(c,w),e} &\ge& 0 \\
-    h_{ha(c,w),e} &\ge& y(c,w_0,w)\, q_{c,w_0}\, (z_{a,e-1}-z_{a,e})\\
-    h_{ha(c,w),e} &\le& y(c,w_0,w)\, q_{c,w_0}\, z_{a,e-1}\\    
-    h_{ha(c,w),e} &\le& y(c,w_0,w)\, q_{c,w_0}\, (1-z_{a,e})
-  \end{eqnarray}
-  Notice that $y(c,w_0,w)q_{c,w_0}$ is the actual quantity of crop $c$ harvested. To
-  remove the quadratic 
 \end{mydesc}
-
+\newpage
 \subsection{External constraints}
 
-\begin{description}
+\begin{mydesc}
+\item[Harvesting constraints] To control the amount of crop harvested in a certain week
+  $w$  from
+  crop included in a chain 
+  \[
+       \chi \ = \ \big(pl_{c,r_0},\dots,ha_{c,r}\big)
+       \ \in \ K_c
+  \]
+  with $w_{\text{earliest}}(pl_{c,r_0}) = w_{\text{earliest}}(pl_{c,r_0}) = w_0$ and
+  $w_{\text{earliest}}(ha_{c,r})= w_{\text{latest}}(ha_{c,r})=w$, we include the
+  following inequalities~\cite[Section~3.3]{artigues-etal11}:
+  \begin{eqnarray}
+    h_{ha(c,r),e} &\ge& 0 \\
+    h_{ha(c,r),e} &\ge& y_{c,r,w}\, (z_{ha(c,r),e-1}-z_{ha(c,r),e})\\
+    h_{ha(c,r),e} &\le& y_{c,r,w}\, z_{ha(c,r),e-1}\\    
+    h_{ha(c,r),e} &\le& y_{c,r,w}\, (1-z_{ha(c,r),e})
+  \end{eqnarray}
+  Here $y_{c,r,w}$ is a new variable in the model whose role it is to indicate the amount
+  of crop $c$ that should be harvested in week $w$ by the $r$-th harvesting activity in
+  the chain~$\chi$.  The inequalities ensure that $h_{ha(c,r),e}=y_{c,r,w}$ if $ha(c,r)$
+  finishes at event~$e$ (that is, the last time it's active is at event $e-1$), and
+  $h_{ha(c,r),e}=0$ otherwise. 
+
+  Next, we break up $y_{c,r,w}=y(c,w_0,w)q_{c,w_0}$ into the product of the amount
+  $y(c,w_0,w)$ of crop produced in week~$w$ by one ``unit of plant'' planted in week~$w_0$
+  (this value is input by the user), and the number $q_{c,w_0}$ of ``units of plant''
+  actually planted by the farmer (this value is supposed to be generated by the
+  solver). The value of $y(c,w_0,w)$ only depends on $\chi$ and the concrete instance
+  $ha(c,r)$ inside $\chi$, so we can consider it known when we generate these
+  inequalities; and we model the products 
+  \begin{eqnarray*}
+    y_{ha(c,r),e-1} &=& q_{c,r,w_0} \, z_{ha(c,r),e-1}\\
+    y_{ha(c,r),e} &=& q_{c,r,w_0} \, z_{ha(c,r),e}
+  \end{eqnarray*}
+  of a nonnegative continuous variable and a binary decision variable as in
+  Section~\ref{sec:tricks} above. The upper bound for $q_{c,r,w_0}$ is input by the user;
+  it can be set to $y_{\text{upper}}(c)$. We also include the global upper bound
+  \[
+     \sum_{r\in R} \sum_{w_0\le w} q_{c,r,w_0} \ \le \ y_{\text{upper},c}.
+  \]
+  To ensure that the event $e$ actually occurs in week~$w$, we use an indicator
+  variable $v_{e,w}$ that equals~$1$ precisely if $t_e\in[w,w+1]$ as in
+  Section~\ref{sec:tricks}, and tie everything together by
+  \[
+     \sum_{\chi\in K_c} \sum_{e\in E} v_{e,w} \,h_{ha(c,r),e} \ = \ Y_{c,w},
+  \]
+  replacing once more the product $v_{e,w} h_{ha(c,r),e}$ by  linear variables.
+
 \item[Crop behavior] For example, Gilad states that \emph{``A head of lettuce planted in
   summer must be harvested the week after it is planted, but if it is planted in winter,
   it can stay in the ground for up to two months.''} This can be modeled via the
@@ -475,6 +517,7 @@ eight weeks can pass before it must be harvested.
   \[
      \sum_{\chi\in K_c} 
   \]
+\end{mydesc}
 
 \subsection{Objective function}
 
